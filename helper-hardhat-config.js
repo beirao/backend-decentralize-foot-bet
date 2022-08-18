@@ -13,7 +13,6 @@ const networkConfig = {
         keyHash: "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc",
         jobId: "29fa9aa13bf1468788b7cc4a500a45b8",
         fundAmount: "1000000000000000000",
-        keepersUpdateInterval: "30",
         ethUsdPriceFeed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
     },
     42: {
@@ -24,7 +23,6 @@ const networkConfig = {
         jobId: "c1c5e92880894eb6b27d3cae19670aa3", // get > bool
         fee: "100000000000000000",
         fundAmount: "100000000000000000", // 0.1
-        keepersUpdateInterval: "30",
     },
     4: {
         name: "rinkeby",
@@ -36,13 +34,11 @@ const networkConfig = {
         jobId: "c1c5e92880894eb6b27d3cae19670aa3", // get > bool
         fee: "100000000000000000",
         fundAmount: "100000000000000000", // 0.1
-        keepersUpdateInterval: "30",
     },
     1: {
         name: "mainnet",
         linkToken: "0x514910771af9ca656af840dff83e8264ecf986ca",
         fundAmount: "0",
-        keepersUpdateInterval: "30",
     },
     5: {
         name: "goerli",

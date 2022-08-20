@@ -51,6 +51,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
     uint256 s_totalBetDraw;
 
     address[] private s_playerArrayTotal;
+    mapping(address => uint256) s_winnerAdressToReward;
 
     address private immutable i_owner;
     uint256 private constant FEE = 70000; // % * 10⁵ basis points // fees deducted from the total balance of bets
@@ -191,12 +192,10 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
                 address winnerAddress = s_playerArrayWhoBetHome[i];
                 uint256 winnerBetAmount = s_playerWhoBetHomeToAmount[winnerAddress];
                 if (winnerBetAmount > 0) {
-                    (success, ) = winnerAddress.call{
-                        value: calculatePercentage(balance, ((winnerBetAmount * MINIMUM_BET) / s_totalBetHome))
-                    }("");
-                    if (!success) {
-                        revert Bet__TransferFailed();
-                    }
+                    s_winnerAdressToReward[winnerAddress] = calculatePercentage(
+                        balance,
+                        ((winnerBetAmount * MINIMUM_BET) / s_totalBetHome)
+                    );
                     emit playerFunded(matchState.HOME, winnerAddress);
                 }
             }
@@ -205,12 +204,10 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
                 address winnerAddress = s_playerArrayWhoBetAway[i];
                 uint256 winnerBetAmount = s_playerWhoBetAwayToAmount[winnerAddress];
                 if (winnerBetAmount > 0) {
-                    (success, ) = winnerAddress.call{
-                        value: calculatePercentage(balance, ((winnerBetAmount * MINIMUM_BET) / s_totalBetAway))
-                    }("");
-                    if (!success) {
-                        revert Bet__TransferFailed();
-                    }
+                    s_winnerAdressToReward[winnerAddress] = calculatePercentage(
+                        balance,
+                        ((winnerBetAmount * MINIMUM_BET) / s_totalBetHome)
+                    );
                     emit playerFunded(matchState.AWAY, winnerAddress);
                 }
             }
@@ -220,12 +217,10 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
                 uint256 winnerBetAmount = s_playerWhoBetDrawToAmount[winnerAddress];
 
                 if (winnerBetAmount > 0) {
-                    (success, ) = winnerAddress.call{
-                        value: calculatePercentage(balance, ((winnerBetAmount * MINIMUM_BET) / s_totalBetDraw))
-                    }("");
-                    if (!success) {
-                        revert Bet__TransferFailed();
-                    }
+                    s_winnerAdressToReward[winnerAddress] = calculatePercentage(
+                        balance,
+                        ((winnerBetAmount * MINIMUM_BET) / s_totalBetHome)
+                    );
                     emit playerFunded(matchState.DRAW, winnerAddress);
                 }
             }
@@ -243,16 +238,22 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
         for (uint256 i = 0; i < s_playerArrayTotal.length; i++) {
             address playerAddress = s_playerArrayTotal[i];
 
-            (bool success, ) = playerAddress.call{
-                value: s_playerWhoBetHomeToAmount[playerAddress] +
-                    s_playerWhoBetAwayToAmount[playerAddress] +
-                    s_playerWhoBetDrawToAmount[playerAddress]
-            }("");
-            if (!success) {
-                revert Bet__TransferFailed();
-            }
+            s_winnerAdressToReward[msg.sender] =
+                s_playerWhoBetHomeToAmount[playerAddress] +
+                s_playerWhoBetAwayToAmount[playerAddress] +
+                s_playerWhoBetDrawToAmount[playerAddress];
+
             emit playerRefunded(playerAddress);
         }
+    }
+
+    /** @dev Player quand withdraw their reward by caling this function */
+    function withdrawReward() public payable matchHaveToBeEnded {
+        (bool success, ) = msg.sender.call{value: s_winnerAdressToReward[msg.sender]}("");
+        if (!success) {
+            revert Bet__TransferFailed();
+        }
+        s_winnerAdressToReward[msg.sender] = 0;
     }
 
     /**
@@ -357,8 +358,9 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
 
     // Getter functions
 
-    // function getReward() public view matchHaveToBeEnded returns (uint256) {
-    // }
+    function getReward() public view matchHaveToBeEnded returns (uint256) {
+        return s_winnerAdressToReward[msg.sender];
+    }
 
     function getFee() public pure returns (uint256) {
         return FEE;
@@ -372,16 +374,16 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
         return TIMEOUT;
     }
 
-    function getAddressToAmountBetOnHome(address fundingAddress) public view returns (uint256) {
-        return s_playerWhoBetHomeToAmount[fundingAddress];
+    function getAddressToAmountBetOnHome(address _fundingAddress) public view returns (uint256) {
+        return s_playerWhoBetHomeToAmount[_fundingAddress];
     }
 
-    function getAddressToAmountBetOnAway(address fundingAddress) public view returns (uint256) {
-        return s_playerWhoBetAwayToAmount[fundingAddress];
+    function getAddressToAmountBetOnAway(address _fundingAddress) public view returns (uint256) {
+        return s_playerWhoBetAwayToAmount[_fundingAddress];
     }
 
-    function getAddressToAmountBetOnDraw(address fundingAddress) public view returns (uint256) {
-        return s_playerWhoBetDrawToAmount[fundingAddress];
+    function getAddressToAmountBetOnDraw(address _fundingAddress) public view returns (uint256) {
+        return s_playerWhoBetDrawToAmount[_fundingAddress];
     }
 
     function getNumberOfPlayersWhoBetHome() public view returns (uint256) {

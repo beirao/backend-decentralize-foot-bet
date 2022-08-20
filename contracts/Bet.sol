@@ -13,6 +13,7 @@ error Bet__TransferFailed();
 error Bet__FeeTransferFailed();
 error Bet__NotPlayer(address addr);
 error Bet__SendMoreEth();
+error Bet__MatchNotEnded();
 
 /**@title A sample Football bet Contract
  * @author Thomas MARQUES
@@ -81,6 +82,11 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
         _;
     }
 
+    modifier matchHaveToBeEnded() {
+        if (s_betState != contractState.ENDED || s_betState != contractState.CANCELLED) revert Bet__MatchNotEnded();
+        _;
+    }
+
     constructor(
         string memory _matchId,
         uint256 _matchTimeStamp,
@@ -107,7 +113,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
     }
 
     // Utils functions
-    function calculatePercent(uint256 amount, uint256 bPoints) private pure returns (uint256) {
+    function calculatePercentage(uint256 amount, uint256 bPoints) private pure returns (uint256) {
         return (amount * bPoints) / MINIMUM_BET;
     }
 
@@ -143,19 +149,22 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
         uint256 awayBetAmount = s_playerWhoBetAwayToAmount[msg.sender];
         uint256 drawBetAmount = s_playerWhoBetDrawToAmount[msg.sender];
 
-        if (homeBetAmount > 0) {
-            s_playerWhoBetHomeToAmount[msg.sender] = 0;
-            s_totalBetHome--;
-        } else if (awayBetAmount > 0) {
-            s_playerWhoBetAwayToAmount[msg.sender] = 0;
-            s_totalBetAway--;
-        } else if (drawBetAmount > 0) {
-            s_playerWhoBetDrawToAmount[msg.sender] = 0;
-            s_totalBetDraw--;
-        }
         (bool success, ) = msg.sender.call{value: homeBetAmount + awayBetAmount + drawBetAmount}("");
         if (!success) {
             revert Bet__TransferFailed();
+        }
+
+        if (homeBetAmount > 0) {
+            s_playerWhoBetHomeToAmount[msg.sender] = 0;
+            s_totalBetHome -= homeBetAmount;
+        }
+        if (awayBetAmount > 0) {
+            s_playerWhoBetAwayToAmount[msg.sender] = 0;
+            s_totalBetAway -= awayBetAmount;
+        }
+        if (drawBetAmount > 0) {
+            s_playerWhoBetDrawToAmount[msg.sender] = 0;
+            s_totalBetDraw -= drawBetAmount;
         }
     }
 
@@ -165,11 +174,11 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
      * to the amount bet.
      */
     function fundWinners() private {
-        // fund the smart contract owner
+        // fund the owner
         uint256 balance = address(this).balance;
         bool success = false;
         if (balance > MINIMUM_BET) {
-            (success, ) = i_owner.call{value: calculatePercent(address(this).balance, FEE)}("");
+            (success, ) = i_owner.call{value: calculatePercentage(address(this).balance, FEE)}("");
         }
         if (!success) {
             revert Bet__FeeTransferFailed();
@@ -183,7 +192,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
                 uint256 winnerBetAmount = s_playerWhoBetHomeToAmount[winnerAddress];
                 if (winnerBetAmount > 0) {
                     (success, ) = winnerAddress.call{
-                        value: calculatePercent(balance, ((winnerBetAmount * MINIMUM_BET) / s_totalBetHome))
+                        value: calculatePercentage(balance, ((winnerBetAmount * MINIMUM_BET) / s_totalBetHome))
                     }("");
                     if (!success) {
                         revert Bet__TransferFailed();
@@ -197,7 +206,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
                 uint256 winnerBetAmount = s_playerWhoBetAwayToAmount[winnerAddress];
                 if (winnerBetAmount > 0) {
                     (success, ) = winnerAddress.call{
-                        value: calculatePercent(balance, ((winnerBetAmount * MINIMUM_BET) / s_totalBetAway))
+                        value: calculatePercentage(balance, ((winnerBetAmount * MINIMUM_BET) / s_totalBetAway))
                     }("");
                     if (!success) {
                         revert Bet__TransferFailed();
@@ -212,7 +221,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
 
                 if (winnerBetAmount > 0) {
                     (success, ) = winnerAddress.call{
-                        value: calculatePercent(balance, ((winnerBetAmount * MINIMUM_BET) / s_totalBetDraw))
+                        value: calculatePercentage(balance, ((winnerBetAmount * MINIMUM_BET) / s_totalBetDraw))
                     }("");
                     if (!success) {
                         revert Bet__TransferFailed();
@@ -348,12 +357,19 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
 
     // Getter functions
 
+    // function getReward() public view matchHaveToBeEnded returns (uint256) {
+    // }
+
     function getFee() public pure returns (uint256) {
         return FEE;
     }
 
     function getMinimumBet() public pure returns (uint256) {
         return MINIMUM_BET;
+    }
+
+    function getTimeout() public pure returns (uint256) {
+        return TIMEOUT;
     }
 
     function getAddressToAmountBetOnHome(address fundingAddress) public view returns (uint256) {

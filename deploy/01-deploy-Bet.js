@@ -1,5 +1,12 @@
 const { getNamedAccounts, deployments, network } = require("hardhat")
-const { networkConfig, developmentChains, VERIFICATION_BLOCK_CONFIRMATIONS } = require("../helper-hardhat-config")
+const {
+    networkConfig,
+    developmentChains,
+    VERIFICATION_BLOCK_CONFIRMATIONS,
+    FEE_OWNER,
+    MINIMUM_BET,
+    TIMEOUT,
+} = require("../helper-hardhat-config")
 const { autoFundCheck, verify } = require("../helper-functions")
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
@@ -26,7 +33,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const fee = networkConfig[chainId]["fee"]
     const waitBlockConfirmations = developmentChains.includes(network.name) ? 1 : VERIFICATION_BLOCK_CONFIRMATIONS
     const matchId = "0"
-    const matchTimestamp = Math.trunc(Date.now() * 0.001) + 24 * 60 * 60 // the match will start 1 day after the contract deployment
+    const matchTimestamp = Math.trunc(Date.now() * 0.001) + TIMEOUT // the match will start 1 day after the contract deployment
 
     const args = [matchId, matchTimestamp, oracle, jobId, fee, linkTokenAddress]
     const bet = await deploy("Bet", {

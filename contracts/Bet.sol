@@ -9,6 +9,7 @@ import "hardhat/console.sol";
 // Errors
 error Bet__UpkeepNotNeeded(uint256 currentBalance, uint256 betState);
 error Bet__betValueNotCorrect(uint256 betState);
+error Bet__ZeroBalance();
 error Bet__TransferFailed();
 error Bet__FeeTransferFailed();
 error Bet__NotPlayer(address addr);
@@ -72,6 +73,8 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
     uint256 private immutable i_fee;
 
     // Events
+    event playerBetting(matchState ms, address indexed playerAdrr);
+    event playerCancelBet(address indexed playerAdrr);
     event RequestWinner(bytes32 indexed requestId, uint256 _matchState);
     event RequestBetWinner(bytes32 indexed requestId);
     event playerFunded(matchState ms, address indexed winnerAddress);
@@ -122,23 +125,25 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
      * @dev toBet fonction : public function that able every user to bet
      * on a team for a given match.
      */
-    function toBet(matchState _betSide, uint256 _betAmount) public payable minimumSend {
+    function toBet(matchState _betSide) public payable minimumSend {
         if (_betSide == matchState.HOME) {
-            s_playerWhoBetHomeToAmount[msg.sender] += _betAmount;
+            s_playerWhoBetHomeToAmount[msg.sender] += msg.value;
             s_playerArrayWhoBetHome.push(payable(msg.sender));
             s_totalBetHome += msg.value;
         } else if (_betSide == matchState.AWAY) {
-            s_playerWhoBetAwayToAmount[msg.sender] += _betAmount;
+            s_playerWhoBetAwayToAmount[msg.sender] += msg.value;
             s_playerArrayWhoBetAway.push(payable(msg.sender));
             s_totalBetAway += msg.value;
         } else if (_betSide == matchState.DRAW) {
-            s_playerWhoBetDrawToAmount[msg.sender] += _betAmount;
+            s_playerWhoBetDrawToAmount[msg.sender] += msg.value;
             s_playerArrayWhoBetDraw.push(payable(msg.sender));
             s_totalBetDraw += msg.value;
         } else {
             revert Bet__betValueNotCorrect(uint256(_betSide));
         }
+
         s_playerArrayTotal.push(msg.sender);
+        emit playerBetting(_betSide, msg.sender);
     }
 
     /**
@@ -149,6 +154,10 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
         uint256 homeBetAmount = s_playerWhoBetHomeToAmount[msg.sender];
         uint256 awayBetAmount = s_playerWhoBetAwayToAmount[msg.sender];
         uint256 drawBetAmount = s_playerWhoBetDrawToAmount[msg.sender];
+
+        if (homeBetAmount + awayBetAmount + drawBetAmount == 0) {
+            revert Bet__ZeroBalance();
+        }
 
         (bool success, ) = msg.sender.call{value: homeBetAmount + awayBetAmount + drawBetAmount}("");
         if (!success) {
@@ -167,6 +176,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
             s_playerWhoBetDrawToAmount[msg.sender] = 0;
             s_totalBetDraw -= drawBetAmount;
         }
+        emit playerCancelBet(msg.sender);
     }
 
     /**
@@ -279,19 +289,12 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
             bytes memory /* performData */
         )
     {
-        bool isStarted = (s_betState == contractState.STARTED);
+        bool isStarted = (s_betState == contractState.PLANNED);
         bool isSupposedFinish = ((block.timestamp - i_matchTimeStamp) > TIMEOUT);
-        bool hasBalance = address(this).balance > 0;
-        bool hasPlayersWhoBetHome = (s_playerArrayWhoBetHome.length > 0);
-        bool hasPlayersWhoBetAway = (s_playerArrayWhoBetAway.length > 0);
-        bool hasPlayersWhoBetDraw = (s_playerArrayWhoBetDraw.length > 0);
-
-        upkeepNeeded = (isStarted &&
-            isSupposedFinish &&
-            hasBalance &&
-            hasPlayersWhoBetHome &&
-            hasPlayersWhoBetAway &&
-            hasPlayersWhoBetDraw);
+        bool hasPlayersWhoBetHome = (s_totalBetHome >= MINIMUM_BET);
+        bool hasPlayersWhoBetAway = (s_totalBetAway >= MINIMUM_BET);
+        bool hasPlayersWhoBetDraw = (s_totalBetDraw >= MINIMUM_BET);
+        upkeepNeeded = (isStarted && isSupposedFinish && hasPlayersWhoBetHome && hasPlayersWhoBetAway && hasPlayersWhoBetDraw);
     }
 
     /*performUpKeep is called when the var upkeepNeeded form checkUpKeep is true*/
@@ -312,7 +315,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
      * And call requestWinnerData() that reach the needed data by making an API
      * call by running a job (build with an external adapter) on a chainlink node.
      */
-    function requestWinnerData() private returns (bytes32 requestId) {
+    function requestWinnerData() public returns (bytes32 requestId) {
         Chainlink.Request memory req = buildChainlinkRequest(i_jobId, address(this), this.fulfill.selector);
         req.add("matchId", s_matchId);
 
@@ -396,6 +399,22 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
 
     function getNumberOfPlayersWhoBetDraw() public view returns (uint256) {
         return s_playerArrayWhoBetDraw.length;
+    }
+
+    function getHomeBetAmount() public view returns (uint256) {
+        return s_totalBetHome;
+    }
+
+    function getAwayBetAmount() public view returns (uint256) {
+        return s_totalBetAway;
+    }
+
+    function getDrawBetAmount() public view returns (uint256) {
+        return s_totalBetDraw;
+    }
+
+    function getContractBalance() public view returns (uint256) {
+        return address(this).balance;
     }
 
     function getSmartContractState() public view returns (contractState) {

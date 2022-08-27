@@ -1,4 +1,4 @@
-const FEE_OWNER = 70000 // % * 10⁵ basis points // fees deducted from the total balance of bets
+const FEE_OWNER = 700000000000 // % * 10⁵ basis points // fees deducted from the total balance of bets
 const MINIMUM_BET = 10000000000000 // 0.00001 eth
 const TIMEOUT = 24 * 60 * 60 // 1 jour
 

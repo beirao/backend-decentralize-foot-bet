@@ -14,7 +14,8 @@ error Bet__TransferFailed();
 error Bet__FeeTransferFailed();
 error Bet__NotPlayer(address addr);
 error Bet__SendMoreEth();
-error Bet__MatchNotEnded();
+error Bet__MatchStarted();
+error Bet__PlayersNotFundedYet();
 
 /**@title A sample Football bet Contract
  * @author Thomas MARQUES
@@ -29,13 +30,16 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
         PLANNED,
         STARTED,
         ENDED,
-        CANCELLED
+        CANCELLED,
+        PLAYERS_FUNDED_ENDED,
+        PLAYERS_FUNDED_CANCELLED
     }
     enum matchState {
         NOT_ENDED,
         HOME,
         AWAY,
-        DRAW
+        DRAW,
+        CANCELLED
     }
 
     // Bet vars
@@ -55,7 +59,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
     mapping(address => uint256) s_winnerAdressToReward;
 
     address private immutable i_owner;
-    uint256 private constant FEE = 70000; // % * 10⁵ basis points // fees deducted from the total balance of bets
+    uint256 private constant FEE = 700000000000; // % * 10⁵ basis points // fees deducted from the total balance of bets
     uint256 private constant MINIMUM_BET = 10000000000000; // 0.00001 eth
     uint256 private constant TIMEOUT = 24 * 60 * 60; // 1 jour
     contractState private s_betState;
@@ -77,17 +81,19 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
     event playerCancelBet(address indexed playerAdrr);
     event RequestWinner(bytes32 indexed requestId, uint256 _matchState);
     event RequestBetWinner(bytes32 indexed requestId);
-    event playerFunded(matchState ms, address indexed winnerAddress);
-    event playerRefunded(address indexed playerAddress);
 
     // Modifiers
     modifier minimumSend() {
         if (msg.value < MINIMUM_BET) revert Bet__SendMoreEth();
         _;
     }
-
-    modifier matchHaveToBeEnded() {
-        if (s_betState != contractState.ENDED || s_betState != contractState.CANCELLED) revert Bet__MatchNotEnded();
+    modifier matchStarted() {
+        if (s_betState != contractState.PLANNED) revert Bet__MatchStarted();
+        _;
+    }
+    modifier playersNotFundedYet() {
+        if (!(s_betState == contractState.PLAYERS_FUNDED_ENDED || s_betState == contractState.PLAYERS_FUNDED_CANCELLED))
+            revert Bet__PlayersNotFundedYet();
         _;
     }
 
@@ -125,7 +131,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
      * @dev toBet fonction : public function that able every user to bet
      * on a team for a given match.
      */
-    function toBet(matchState _betSide) public payable minimumSend {
+    function toBet(matchState _betSide) public payable minimumSend matchStarted {
         if (_betSide == matchState.HOME) {
             s_playerWhoBetHomeToAmount[msg.sender] += msg.value;
             s_playerArrayWhoBetHome.push(payable(msg.sender));
@@ -150,7 +156,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
      * @dev able a player to cancel all his bet
      */
 
-    function cancelBet() public payable {
+    function cancelBet() public payable matchStarted {
         uint256 homeBetAmount = s_playerWhoBetHomeToAmount[msg.sender];
         uint256 awayBetAmount = s_playerWhoBetAwayToAmount[msg.sender];
         uint256 drawBetAmount = s_playerWhoBetDrawToAmount[msg.sender];
@@ -206,22 +212,24 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
                         balance,
                         ((winnerBetAmount * MINIMUM_BET) / s_totalBetHome)
                     );
-                    emit playerFunded(matchState.HOME, winnerAddress);
                 }
             }
-        } else if (s_winner == matchState.AWAY) {
+            s_betState = contractState.PLAYERS_FUNDED_ENDED;
+        }
+        if (s_winner == matchState.AWAY) {
             for (uint256 i = 0; i < s_playerArrayWhoBetAway.length; i++) {
                 address winnerAddress = s_playerArrayWhoBetAway[i];
                 uint256 winnerBetAmount = s_playerWhoBetAwayToAmount[winnerAddress];
                 if (winnerBetAmount > 0) {
                     s_winnerAdressToReward[winnerAddress] = calculatePercentage(
                         balance,
-                        ((winnerBetAmount * MINIMUM_BET) / s_totalBetHome)
+                        ((winnerBetAmount * MINIMUM_BET) / s_totalBetAway)
                     );
-                    emit playerFunded(matchState.AWAY, winnerAddress);
                 }
             }
-        } else if (s_winner == matchState.DRAW) {
+            s_betState = contractState.PLAYERS_FUNDED_ENDED;
+        }
+        if (s_winner == matchState.DRAW) {
             for (uint256 i = 0; i < s_playerArrayWhoBetDraw.length; i++) {
                 address winnerAddress = s_playerArrayWhoBetDraw[i];
                 uint256 winnerBetAmount = s_playerWhoBetDrawToAmount[winnerAddress];
@@ -229,13 +237,11 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
                 if (winnerBetAmount > 0) {
                     s_winnerAdressToReward[winnerAddress] = calculatePercentage(
                         balance,
-                        ((winnerBetAmount * MINIMUM_BET) / s_totalBetHome)
+                        ((winnerBetAmount * MINIMUM_BET) / s_totalBetDraw)
                     );
-                    emit playerFunded(matchState.DRAW, winnerAddress);
                 }
             }
-        } else {
-            refundAll();
+            s_betState = contractState.PLAYERS_FUNDED_ENDED;
         }
     }
 
@@ -248,17 +254,16 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
         for (uint256 i = 0; i < s_playerArrayTotal.length; i++) {
             address playerAddress = s_playerArrayTotal[i];
 
-            s_winnerAdressToReward[msg.sender] =
+            s_winnerAdressToReward[playerAddress] =
                 s_playerWhoBetHomeToAmount[playerAddress] +
                 s_playerWhoBetAwayToAmount[playerAddress] +
                 s_playerWhoBetDrawToAmount[playerAddress];
-
-            emit playerRefunded(playerAddress);
         }
+        s_betState = contractState.PLAYERS_FUNDED_CANCELLED;
     }
 
     /** @dev Player quand withdraw their reward by caling this function */
-    function withdrawReward() public payable matchHaveToBeEnded {
+    function withdrawReward() public payable playersNotFundedYet {
         (bool success, ) = msg.sender.call{value: s_winnerAdressToReward[msg.sender]}("");
         if (!success) {
             revert Bet__TransferFailed();
@@ -271,10 +276,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
      * they look for `upkeepNeeded` to return True.
      * the following should be true for this to return true:
      * 1. The match is supposed to be ended.
-     *      - match started + TIMEOUT TIME (5 hours)
-     * 2. Once performUpkeep was call one time : (LETS SEE THAT)
-     *      - The performUpkeep will be call every day 2 times
-     *      - If the api still does not return a winner, the bet will be cancelled
+     *      - match started + TIMEOUT TIME (1 jour)
      * 3. The contract has ETH.
      * 4. Implicity, your subscription is funded with LINK.
      */
@@ -341,12 +343,12 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
             s_winner = matchState.DRAW;
         } else if (_matchState == 4) {
             s_betState = contractState.CANCELLED;
-            s_winner = matchState.DRAW;
+            s_winner = matchState.CANCELLED;
         }
-
+        //TODOOOOOOOOOOOOOOOO gerer toute les possibilitées
         if (s_betState == contractState.ENDED) {
             fundWinners();
-        } else if (s_betState == contractState.CANCELLED) {
+        } else {
             refundAll();
         }
     }
@@ -361,7 +363,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
 
     // Getter functions
 
-    function getReward() public view matchHaveToBeEnded returns (uint256) {
+    function getReward() public view playersNotFundedYet returns (uint256) {
         return s_winnerAdressToReward[msg.sender];
     }
 

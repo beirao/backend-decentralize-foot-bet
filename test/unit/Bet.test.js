@@ -15,7 +15,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
 !developmentChains.includes(network.name)
     ? describe.skip
     : describe("Bet Unit Tests", async function () {
-          let bet, linkToken, mockOracle, deployer, accounts, accConnection1, accConnection2, testBalanceConsistency, txr
+          let bet, linkToken, mockOracle, deployer, accounts, accConnection1, accConnection2, testBalanceConsistency, txr, txr2
 
           beforeEach(async () => {
               deployer = (await getNamedAccounts()).deployer
@@ -47,10 +47,13 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   assert.equal(await bet.getSmartContractState(), "0")
               })
           })
-
           describe("Enter a bet", function () {
-              it("Revert when you don't pay enough", async function () {
+              it("Revert when you don't pay enough + reward reverted", async function () {
                   await expect(bet.toBet(1, { value: MINIMUM_BET - 1 })).to.be.revertedWith("Bet__SendMoreEth")
+                  await expect(bet.withdrawReward()).to.be.revertedWith("Bet__PlayersNotFundedYet")
+                  await expect(accConnection1.withdrawReward()).to.be.revertedWith("Bet__PlayersNotFundedYet")
+                  await expect(bet.getReward()).to.be.revertedWith("Bet__PlayersNotFundedYet")
+                  await expect(accConnection1.getReward()).to.be.revertedWith("Bet__PlayersNotFundedYet")
               })
               it("Check variable home bet + event", async function () {
                   const tx = await bet.toBet(1, { value: MINIMUM_BET })
@@ -96,7 +99,6 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   )
               })
           })
-
           describe("Cancel bet", function () {
               beforeEach(async () => {
                   const tx1 = await bet.toBet(1, { value: BET_PRICE })
@@ -168,7 +170,6 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   assert.equal(playerAdrr, accounts[2].address)
               })
           })
-
           describe("Test upkeep", function () {
               it("Test only timestamp = true", async function () {
                   await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT + 1] })
@@ -233,77 +234,211 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   await network.provider.request({ method: "evm_mine", params: [] })
                   await (await bet.performUpkeep("0x")).wait(1)
               })
-              it("Should successfully make an API request", async () => {
-                  const tx = await bet.requestWinnerData()
-                  const txr = await tx.wait(1)
-                  const requestId = txr.events[0].args.id
-                  expect(requestId).to.not.be.null
+              describe("Test API EA", function () {
+                  it("Should successfully make an API request", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      expect(requestId).to.not.be.null
+                  })
+
+                  it("Should successfully make an API request and get a result HOME", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      const callbackValue = 1 // HOME win
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(callbackValue))).wait(1)
+
+                      assert.equal(await bet.getSmartContractState(), "4")
+                      assert.equal(await bet.getWinner(), "1")
+                  })
+                  it("Should successfully make an API request and get a result AWAY", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      const callbackValue = 2 // AWAY win
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(callbackValue))).wait(1)
+
+                      assert.equal(await bet.getSmartContractState(), "4")
+                      assert.equal(await bet.getWinner(), "2")
+                  })
+                  it("Should successfully make an API request and get a result DRAW", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      const callbackValue = 3 // DRAW win
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(callbackValue))).wait(1)
+
+                      assert.equal(await bet.getSmartContractState(), "4")
+                      assert.equal(await bet.getWinner(), "3")
+                  })
+                  it("Should successfully make an API request and get a result CANCEL + check balance consistency", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      const callbackValue = 4 // Match cancel
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(callbackValue))).wait(1)
+
+                      assert.equal(await bet.getSmartContractState(), "5")
+                      assert.equal(await bet.getWinner(), "4")
+                  })
               })
-
-              it("Should successfully make an API request and get a result HOME", async () => {
-                  const tx = await bet.requestWinnerData()
-                  const txr = await tx.wait(1)
-                  const requestId = txr.events[0].args.id
-                  const callbackValue = 1 // HOME win
-                  await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(callbackValue))).wait(1)
-
-                  assert.equal(await bet.getSmartContractState(), "2")
-                  assert.equal(await bet.getWinner(), "1")
+              describe("Test refundAll", function () {
+                  beforeEach(async () => {
+                      await accConnection1.toBet(1, { value: BET_PRICE })
+                      await accConnection2.toBet(2, { value: BET_PRICE })
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(4))).wait(1) // EA ret 4 => match cancel
+                  })
+                  it("Test all revert", async () => {
+                      await expect(bet.toBet(1, { value: BET_PRICE })).to.be.revertedWith("Bet__MatchStarted")
+                      await expect(bet.cancelBet()).to.be.revertedWith("Bet__MatchStarted")
+                  })
+                  it("Test all balance", async () => {
+                      assert.equal(await bet.getHomeBetAmount(), (BET_PRICE * 2).toString())
+                      assert.equal(await bet.getAwayBetAmount(), (BET_PRICE * 2).toString())
+                      assert.equal(await bet.getDrawBetAmount(), BET_PRICE.toString())
+                  })
+                  it("Test reward repartion", async () => {
+                      assert.equal(await bet.getReward(), (BET_PRICE * 3).toString())
+                      assert.equal(await accConnection2.getReward(), BET_PRICE.toString())
+                      assert.equal(await accConnection1.getReward(), BET_PRICE.toString())
+                  })
               })
-              it("Should successfully make an API request and get a result AWAY", async () => {
-                  const tx = await bet.requestWinnerData()
-                  const txr = await tx.wait(1)
-                  const requestId = txr.events[0].args.id
-                  const callbackValue = 2 // HOME win
-                  await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(callbackValue))).wait(1)
+              describe("Test fundWinners", function () {
+                  beforeEach(async () => {
+                      await accConnection1.toBet(1, { value: BET_PRICE })
+                      await accConnection2.toBet(2, { value: BET_PRICE })
+                  })
+                  it("Test owner taxe", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      const oldDeployerBalance = await accounts[0].getBalance()
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(1))).wait(1) // EA ret 3 => draw win
 
-                  assert.equal(await bet.getSmartContractState(), "2")
-                  assert.equal(await bet.getWinner(), "2")
+                      console.log("oldDeployerBalance ", oldDeployerBalance.toString())
+                      console.log("newDeployerBalance ", (await accounts[0].getBalance()).toString())
+
+                      assert.isTrue(oldDeployerBalance < (await accounts[0].getBalance()))
+                  })
+                  it("Test home win", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(1))).wait(1) // EA ret 1 => home win
+
+                      assert.equal((await bet.getReward()).toString(), "232500000000000000")
+                      assert.equal((await accConnection1.getReward()).toString(), "232500000000000000")
+                      assert.equal((await accConnection2.getReward()).toString(), "0")
+                  })
+                  it("Test away win", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(2))).wait(1) // EA ret 2 => away win
+
+                      assert.equal((await bet.getReward()).toString(), "232500000000000000")
+                      assert.equal((await accConnection1.getReward()).toString(), "0")
+                      assert.equal((await accConnection2.getReward()).toString(), "232500000000000000")
+                  })
+                  it("Test draw win", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(3))).wait(1) // EA ret 3 => draw win
+
+                      assert.equal((await bet.getReward()).toString(), "465000000000000000")
+                      assert.equal((await accConnection1.getReward()).toString(), "0")
+                      assert.equal((await accConnection2.getReward()).toString(), "0")
+                  })
+                  it("Test erroned value refundAll", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(6))).wait(1) // EA ret 3 => draw win
+
+                      assert.equal((await bet.getReward()).toString(), BET_PRICE * 3)
+                      assert.equal((await accConnection1.getReward()).toString(), BET_PRICE)
+                      assert.equal((await accConnection2.getReward()).toString(), BET_PRICE)
+                  })
               })
-              it("Should successfully make an API request and get a result DRAW", async () => {
-                  const tx = await bet.requestWinnerData()
-                  const txr = await tx.wait(1)
-                  const requestId = txr.events[0].args.id
-                  const callbackValue = 3 // HOME win
-                  await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(callbackValue))).wait(1)
+              describe("Test withdrawReward", function () {
+                  beforeEach(async () => {
+                      await accConnection1.toBet(1, { value: BET_PRICE })
+                      await accConnection2.toBet(2, { value: BET_PRICE })
+                  })
+                  it("Test home win", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(1))).wait(1)
+                      // EA ret 1 => home win
 
-                  assert.equal(await bet.getSmartContractState(), "2")
-                  assert.equal(await bet.getWinner(), "3")
-              })
-              it("Should successfully make an API request and get a result CANCEL", async () => {
-                  const tx = await bet.requestWinnerData()
-                  const txr = await tx.wait(1)
-                  const requestId = txr.events[0].args.id
-                  const callbackValue = 4 // HOME win
-                  await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(callbackValue))).wait(1)
+                      await bet.withdrawReward()
+                      await accConnection1.withdrawReward()
+                      await accConnection2.withdrawReward()
 
-                  assert.equal(await bet.getSmartContractState(), "3")
-                  assert.equal(await bet.getWinner(), "3")
+                      assert.equal((await bet.getContractBalance()).toString(), "0")
+                  })
+                  it("Test away win", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(2))).wait(1)
+                      // EA ret 1 => home win
+
+                      await bet.withdrawReward()
+                      await accConnection1.withdrawReward()
+                      await accConnection2.withdrawReward()
+
+                      assert.equal((await bet.getContractBalance()).toString(), "0")
+                  })
+                  it("Test draw win", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(3))).wait(1)
+                      // EA ret 1 => home win
+
+                      await bet.withdrawReward()
+                      await accConnection1.withdrawReward()
+                      await accConnection2.withdrawReward()
+
+                      assert.equal((await bet.getContractBalance()).toString(), "0")
+                  })
+                  it("Test cancel", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(4))).wait(1)
+                      // EA ret 1 => home win
+
+                      await bet.withdrawReward()
+                      await accConnection1.withdrawReward()
+                      await accConnection2.withdrawReward()
+
+                      assert.equal((await bet.getContractBalance()).toString(), "0")
+                  })
+                  it("Test erroned value refundAll", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(40))).wait(1)
+                      // EA ret 1 => home win
+
+                      await bet.withdrawReward()
+                      await accConnection1.withdrawReward()
+                      await accConnection2.withdrawReward()
+
+                      assert.equal((await bet.getContractBalance()).toString(), "0")
+                  })
               })
           })
-
-          //   it("Our event should successfully fire event on callback", async () => {
-          //       const callbackValue = 777
-          //       // we setup a promise so we can wait for our callback from the `once` function
-          //       await new Promise(async (resolve, reject) => {
-          //           // setup listener for our event
-          //           apiConsumer.once("DataFullfilled", async () => {
-          //               console.log("DataFullfilled event fired!")
-          //               const volume = await apiConsumer.volume()
-          //               // assert throws an error if it fails, so we need to wrap
-          //               // it in a try/catch so that the promise returns event
-          //               // if it fails.
-          //               try {
-          //                   assert.equal(volume.toString(), callbackValue.toString())
-          //                   resolve()
-          //               } catch (e) {
-          //                   reject(e)
-          //               }
-          //           })
-          //           const transaction = await apiConsumer.requestVolumeData()
-          //           const transactionReceipt = await transaction.wait(1)
-          //           const requestId = transactionReceipt.events[0].topics[1]
-          //           await mockOracle.fulfillOracleRequest(requestId, numToBytes32(callbackValue))
-          //       })
-          //   })
       })
+//   it("Test all revert", async () => {
+//     await expect(bet.withdrawReward()).to.be.revertedWith("Bet__MatchNotEnded")
+//     await expect(accConnection1.withdrawReward()).to.be.revertedWith("Bet__MatchNotEnded")
+// })

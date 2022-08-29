@@ -49,15 +49,16 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 
     // Checking for funding...
-    if (networkConfig.fundAmount && networkConfig.fundAmount > 0) {
+    if (networkConfig[chainId]["fundAmount"] && networkConfig[chainId]["fundAmount"] > 0) {
         log("Funding with LINK...")
         if (await autoFundCheck(bet.address, network.name, linkTokenAddress, additionalMessage)) {
             await hre.run("fund-link", {
                 contract: bet.address,
                 linkaddress: linkTokenAddress,
             })
+            console.log("Contract funded with LINK")
         } else {
-            log("Contract already has LINK!")
+            console.log("Contract already has LINK!")
         }
     }
 

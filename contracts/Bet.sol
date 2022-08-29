@@ -4,7 +4,7 @@ pragma solidity ^0.8.16;
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "@chainlink/contracts/src/v0.8/KeeperCompatible.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 // Errors
 error Bet__UpkeepNotNeeded(uint256 currentBalance, uint256 betState);
@@ -59,7 +59,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
     mapping(address => uint256) s_winnerAdressToReward;
 
     address private immutable i_owner;
-    uint256 private constant FEE = 700000000000; // % * 10⁵ basis points // fees deducted from the total balance of bets
+    uint256 private constant FEE = 200000000000; // % * 10⁵ basis points // fees deducted from the total balance of bets
     uint256 private constant MINIMUM_BET = 10000000000000; // 0.00001 eth
     uint256 private constant TIMEOUT = 24 * 60 * 60; // 1 jour
     contractState private s_betState;

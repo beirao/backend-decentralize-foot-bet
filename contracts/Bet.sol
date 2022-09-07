@@ -4,6 +4,8 @@ pragma solidity ^0.8.16;
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "@chainlink/contracts/src/v0.8/KeeperCompatible.sol";
+import "./AutoKeeperRegistry.sol";
+
 // import "hardhat/console.sol";
 
 // Errors

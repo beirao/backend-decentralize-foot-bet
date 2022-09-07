@@ -175,7 +175,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
           })
           describe("Test upkeep", function () {
               it("Test only timestamp = true", async function () {
-                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT + 1] })
+                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT + 100] })
                   await network.provider.request({ method: "evm_mine", params: [] })
                   // callStatic permit to simulate the transaction without really sending it
                   const { upkeepNeeded } = await bet.callStatic.checkUpkeep([])
@@ -198,7 +198,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   await bet.toBet(2, { value: BET_PRICE })
                   await (await bet.toBet(3, { value: BET_PRICE })).wait(1)
 
-                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT * 2] })
+                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT * 2 + 100] })
                   await network.provider.request({ method: "evm_mine", params: [] })
                   const { upkeepNeeded } = await bet.callStatic.checkUpkeep([])
                   assert(upkeepNeeded)

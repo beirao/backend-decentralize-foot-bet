@@ -1,6 +1,9 @@
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/smartcontractkit/hardhat-starter-kit)
 
 
+## block note
+// import {KeeperRegistryInterface, State, Config} from "@chainlink/src/v0.8/interfaces/KeeperRegistryInterface.sol";
+
 
 # Decentralize Football Bet
 

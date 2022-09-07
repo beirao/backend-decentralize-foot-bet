@@ -40,11 +40,14 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
               it("Check vars initialisation", async () => {
                   const betFee = await bet.getFee()
                   const minBet = await bet.getMinimumBet()
-                  assert.equal(FEE_OWNER, betFee.toString()) // "0" : OPEN "1" : CALCULATING
+                  assert.equal(FEE_OWNER * 10_000_000_000_000, betFee.toString()) // "0" : OPEN "1" : CALCULATING
                   assert.equal(TIMEOUT, timeout.toString())
                   assert.equal(MINIMUM_BET, minBet.toString())
                   assert.equal(await bet.getWinner(), "0")
                   assert.equal(await bet.getSmartContractState(), "0")
+              })
+              it("Test link withdraw", async () => {
+                  assert.equal((await linkToken.balanceOf(bet.address)).toString(), ethers.utils.parseEther("2"))
               })
           })
           describe("Enter a bet", function () {
@@ -306,11 +309,20 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       assert.equal(await accConnection2.getReward(), BET_PRICE.toString())
                       assert.equal(await accConnection1.getReward(), BET_PRICE.toString())
                   })
+                  it("Test link withdraw", async () => {
+                      assert.equal((await linkToken.balanceOf(bet.address)).toString(), "0")
+                  })
               })
               describe("Test fundWinners", function () {
                   beforeEach(async () => {
                       await accConnection1.toBet(1, { value: BET_PRICE })
                       await accConnection2.toBet(2, { value: BET_PRICE })
+                  })
+                  it("Test linkk", async () => {
+                      assert.equal(
+                          (await linkToken.balanceOf(bet.address)).toString(),
+                          ethers.utils.parseEther("2") - ethers.utils.parseEther("0.1") /* the bet.performUpkeep("0x") fee */
+                      )
                   })
                   it("Test owner taxe", async () => {
                       const tx = await bet.requestWinnerData()
@@ -330,8 +342,11 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(1))).wait(1) // EA ret 1 => home win
 
-                      assert.equal((await bet.getReward()).toString(), "232500000000000000")
-                      assert.equal((await accConnection1.getReward()).toString(), "232500000000000000")
+                      assert.equal((await bet.getReward()).toString(), ((BET_PRICE * 5 * (1 - FEE_OWNER)) / 2).toString())
+                      assert.equal(
+                          (await accConnection1.getReward()).toString(),
+                          ((BET_PRICE * 5 * (1 - FEE_OWNER)) / 2).toString()
+                      )
                       assert.equal((await accConnection2.getReward()).toString(), "0")
                   })
                   it("Test away win", async () => {
@@ -340,9 +355,12 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(2))).wait(1) // EA ret 2 => away win
 
-                      assert.equal((await bet.getReward()).toString(), "232500000000000000")
+                      assert.equal((await bet.getReward()).toString(), ((BET_PRICE * 5 * (1 - FEE_OWNER)) / 2).toString())
                       assert.equal((await accConnection1.getReward()).toString(), "0")
-                      assert.equal((await accConnection2.getReward()).toString(), "232500000000000000")
+                      assert.equal(
+                          (await accConnection2.getReward()).toString(),
+                          ((BET_PRICE * 5 * (1 - FEE_OWNER)) / 2).toString()
+                      )
                   })
                   it("Test draw win", async () => {
                       const tx = await bet.requestWinnerData()
@@ -350,7 +368,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(3))).wait(1) // EA ret 3 => draw win
 
-                      assert.equal((await bet.getReward()).toString(), "465000000000000000")
+                      assert.equal((await bet.getReward()).toString(), (BET_PRICE * 5 * (1 - FEE_OWNER)).toString())
                       assert.equal((await accConnection1.getReward()).toString(), "0")
                       assert.equal((await accConnection2.getReward()).toString(), "0")
                   })
@@ -363,6 +381,13 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       assert.equal((await bet.getReward()).toString(), BET_PRICE * 3)
                       assert.equal((await accConnection1.getReward()).toString(), BET_PRICE)
                       assert.equal((await accConnection2.getReward()).toString(), BET_PRICE)
+                  })
+                  it("Test link withdraw", async () => {
+                      const tx = await bet.requestWinnerData()
+                      const txr = await tx.wait(1)
+                      const requestId = txr.events[0].args.id
+                      await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(2))).wait(1) // EA ret 2 => away win
+                      assert.equal((await linkToken.balanceOf(bet.address)).toString(), "0")
                   })
               })
               describe("Test withdrawReward", function () {

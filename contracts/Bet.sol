@@ -345,12 +345,13 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
             s_betState = contractState.CANCELLED;
             s_winner = matchState.CANCELLED;
         }
-        //TODOOOOOOOOOOOOOOOO gerer toute les possibilitées
+
         if (s_betState == contractState.ENDED) {
             fundWinners();
         } else {
             refundAll();
         }
+        autoWithdrawLink();
     }
 
     /**
@@ -361,8 +362,12 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
         require(link.transfer(msg.sender, link.balanceOf(address(this))), "Unable to transfer");
     }
 
-    // Getter functions
+    function autoWithdrawLink() private {
+        LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
+        require(link.transfer(i_owner, link.balanceOf(address(this))), "Unable to transfer");
+    }
 
+    // Getter functions
     function getReward() public view playersNotFundedYet returns (uint256) {
         return s_winnerAdressToReward[msg.sender];
     }

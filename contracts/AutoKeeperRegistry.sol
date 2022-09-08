@@ -7,6 +7,9 @@ pragma solidity ^0.8.16;
 import {KeeperRegistryInterface, State, Config} from "chainlinkDev/src/v0.8/interfaces/KeeperRegistryInterface1_2.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 
+// Errors
+error AutoKeeperRegistry__registerAndPredictID();
+
 /**contracts
  * THIS IS AN EXAMPLE CONTRACT THAT USES HARDCODED VALUES FOR CLARITY.
  * THIS IS AN EXAMPLE CONTRACT THAT USES UN-AUDITED CODE.
@@ -45,27 +48,14 @@ contract AutoKeeperRegistry {
 
     function registerAndPredictID(
         string memory name,
-        bytes calldata encryptedEmail,
         address upkeepContract,
         uint32 gasLimit,
         address adminAddress,
-        bytes calldata checkData,
-        uint96 amount,
-        uint8 source
-    ) public {
+        uint96 amount
+    ) public returns (uint256) {
         (State memory state, Config memory _c, address[] memory _k) = i_registry.getState();
         uint256 oldNonce = state.nonce;
-        bytes memory payload = abi.encode(
-            name,
-            encryptedEmail,
-            upkeepContract,
-            gasLimit,
-            adminAddress,
-            checkData,
-            amount,
-            source,
-            address(this)
-        );
+        bytes memory payload = abi.encode(name, "0x", upkeepContract, gasLimit, adminAddress, "0x", amount, 0, address(this));
 
         i_link.transferAndCall(registrar, amount, bytes.concat(registerSig, payload));
         (state, _c, _k) = i_registry.getState();
@@ -74,9 +64,9 @@ contract AutoKeeperRegistry {
             uint256 upkeepID = uint256(
                 keccak256(abi.encodePacked(blockhash(block.number - 1), address(i_registry), uint32(oldNonce)))
             );
-            // DEV - Use the upkeepID however you see fit
+            return upkeepID;
         } else {
-            revert("auto-approve disabled");
+            revert AutoKeeperRegistry__registerAndPredictID();
         }
     }
 }

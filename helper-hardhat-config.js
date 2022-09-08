@@ -9,6 +9,8 @@ const networkConfig = {
         keyHash: "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc",
         jobId: "29fa9aa13bf1468788b7cc4a500a45b8",
         fundAmount: "1000000000000000000",
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
         keepersUpdateInterval: "30",
     },
     31337: {
@@ -17,6 +19,8 @@ const networkConfig = {
         keyHash: "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc",
         jobId: "29fa9aa13bf1468788b7cc4a500a45b8",
         fundAmount: "1000000000000000000",
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
         ethUsdPriceFeed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
     },
     42: {
@@ -27,6 +31,8 @@ const networkConfig = {
         jobId: "c1c5e92880894eb6b27d3cae19670aa3", // get > bool
         fundAmount: "100000000000000000", // 0.1
         fee: "100000000000000000",
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
     },
     4: {
         name: "rinkeby",
@@ -38,15 +44,21 @@ const networkConfig = {
         jobId: "c1c5e92880894eb6b27d3cae19670aa3", // get > bool
         fundAmount: "100000000000000000", // 0.1
         fee: "100000000000000000",
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
     },
     1: {
         name: "mainnet",
         linkToken: "0x514910771af9ca656af840dff83e8264ecf986ca",
         fundAmount: "0",
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
     },
     5: {
         name: "goerli",
         linkToken: "0x326c977e6efc84e512bb9c30f76e30c160ed06fb",
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0x9806cf6fBc89aBF286e8140C42174B94836e36F2",
         fundAmount: "0",
         fee: "100000000000000000",
     },
@@ -58,6 +70,8 @@ const networkConfig = {
         jobId: "12b86114fa9e46bab3ca436f88e1a912",
         fee: "100000000000000",
         fundAmount: "100000000000000",
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
     },
 }
 

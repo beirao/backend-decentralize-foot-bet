@@ -4,6 +4,8 @@ pragma solidity ^0.8.16;
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "@chainlink/contracts/src/v0.8/KeeperCompatible.sol";
+
+// import {LinkTokenInterface, KeeperRegistryInterface} from "./AutoKeeperRegistry.sol";
 import "./AutoKeeperRegistry.sol";
 
 // import "hardhat/console.sol";
@@ -18,6 +20,7 @@ error Bet__NotPlayer(address addr);
 error Bet__SendMoreEth();
 error Bet__MatchStarted();
 error Bet__PlayersNotFundedYet();
+error Bet__DontNeedToRegisterUpKeep();
 
 /**@title A sample Football bet Contract
  * @author Thomas MARQUES
@@ -77,6 +80,8 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
     // Chainlink var
     bytes32 private immutable i_jobId;
     uint256 private immutable i_fee;
+    AutoKeeperRegistry private akr;
+    uint256 private upkeepID;
 
     // Events
     event playerBetting(matchState ms, address indexed playerAdrr);
@@ -105,7 +110,10 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
         address _oracleAddress,
         bytes32 _jobId,
         uint256 _fee,
-        address _linkAddress
+        address _linkAddress,
+        /* LinkTokenInterface _linkInterface,*/
+        address _registrar,
+        KeeperRegistryInterface _registry
     ) ConfirmedOwner(msg.sender) {
         // Global
         i_owner = msg.sender;
@@ -122,11 +130,28 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
         setChainlinkOracle(_oracleAddress);
         i_jobId = _jobId;
         i_fee = _fee;
+        upkeepID = 0;
+
+        akr = new AutoKeeperRegistry(LinkTokenInterface(_linkAddress), _registrar, _registry);
     }
 
     // Utils functions
     function calculatePercentage(uint256 amount, uint256 bPoints) private pure returns (uint256) {
         return (amount * bPoints) / MINIMUM_BET;
+    }
+
+    /**
+     * @dev register Bet on keeper. This contract need to be funded with link before calling this function.
+     */
+    function registerOnKeeper(
+        string memory _name,
+        uint32 _gasLimit,
+        uint96 _amount
+    ) public onlyOwner {
+        if (upkeepID != 0) {
+            revert Bet__DontNeedToRegisterUpKeep();
+        }
+        upkeepID = akr.registerAndPredictID(_name, address(this), _gasLimit, address(msg.sender), _amount);
     }
 
     /**
@@ -376,6 +401,10 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
 
     function getFee() public pure returns (uint256) {
         return FEE;
+    }
+
+    function getUpkeepID() public view returns (uint256) {
+        return upkeepID;
     }
 
     function getMinimumBet() public pure returns (uint256) {

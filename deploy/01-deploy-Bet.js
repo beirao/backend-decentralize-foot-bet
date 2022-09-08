@@ -34,8 +34,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const waitBlockConfirmations = developmentChains.includes(network.name) ? 1 : VERIFICATION_BLOCK_CONFIRMATIONS
     const matchId = "0"
     const matchTimestamp = Math.trunc(Date.now() * 0.001) + TIMEOUT // the match will start 1 day after the contract deployment
+    const registryAddress = networkConfig[chainId]["registryAddress"]
+    const registrarAddress = networkConfig[chainId]["registrarAddress"]
 
-    const args = [matchId, matchTimestamp, oracle, jobId, fee, linkTokenAddress]
+    const args = [matchId, matchTimestamp, oracle, jobId, fee, linkTokenAddress, registrarAddress, registryAddress]
     const bet = await deploy("Bet", {
         from: deployer,
         args: args,

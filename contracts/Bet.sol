@@ -5,8 +5,8 @@ import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "@chainlink/contracts/src/v0.8/KeeperCompatible.sol";
 
-// import {LinkTokenInterface, KeeperRegistryInterface} from "./AutoKeeperRegistry.sol";
-import "./AutoKeeperRegistry.sol";
+import {KeeperRegistryInterface, State, Config} from "chainlinkDev/src/v0.8/interfaces/KeeperRegistryInterface1_2.sol";
+import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 
 // import "hardhat/console.sol";
 
@@ -21,6 +21,23 @@ error Bet__SendMoreEth();
 error Bet__MatchStarted();
 error Bet__PlayersNotFundedYet();
 error Bet__DontNeedToRegisterUpKeep();
+error Bet__RegisterAndPredictID();
+error Bet__NoReward();
+
+// Interfaces
+interface KeeperRegistrarInterface {
+    function register(
+        string memory name,
+        bytes calldata encryptedEmail,
+        address upkeepContract,
+        uint32 gasLimit,
+        address adminAddress,
+        bytes calldata checkData,
+        uint96 amount,
+        uint8 source,
+        address sender
+    ) external;
+}
 
 /**@title A sample Football bet Contract
  * @author Thomas MARQUES
@@ -80,8 +97,11 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
     // Chainlink var
     bytes32 private immutable i_jobId;
     uint256 private immutable i_fee;
-    AutoKeeperRegistry private akr;
     uint256 private upkeepID;
+    LinkTokenInterface private immutable i_link;
+    address private immutable i_registrar;
+    KeeperRegistryInterface private immutable i_registry;
+    bytes4 registerSig = KeeperRegistrarInterface.register.selector;
 
     // Events
     event playerBetting(matchState ms, address indexed playerAdrr);
@@ -132,7 +152,10 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
         i_fee = _fee;
         upkeepID = 0;
 
-        akr = new AutoKeeperRegistry(LinkTokenInterface(_linkAddress), _registrar, _registry);
+        // Upkeep registry
+        i_link = LinkTokenInterface(_linkAddress);
+        i_registrar = _registrar;
+        i_registry = _registry;
     }
 
     // Utils functions
@@ -141,17 +164,37 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
     }
 
     /**
-     * @dev register Bet on keeper. This contract need to be funded with link before calling this function.
+     * @dev register Bet on keeper. This contract need to be funded with link before calling this function...
      */
-    function registerOnKeeper(
+
+    function registerAndPredictID(
         string memory _name,
         uint32 _gasLimit,
         uint96 _amount
-    ) public onlyOwner {
-        if (upkeepID != 0) {
-            revert Bet__DontNeedToRegisterUpKeep();
+    ) public onlyOwner returns (uint256) {
+        (State memory state, Config memory _c, address[] memory _k) = i_registry.getState();
+        uint256 oldNonce = state.nonce;
+        bytes memory payload = abi.encode(
+            _name,
+            "0x",
+            address(this),
+            _gasLimit,
+            address(msg.sender),
+            "0x",
+            _amount,
+            0,
+            address(this)
+        );
+
+        i_link.transferAndCall(i_registrar, _amount, bytes.concat(registerSig, payload));
+        (state, _c, _k) = i_registry.getState();
+        uint256 newNonce = state.nonce;
+        if (newNonce == oldNonce + 1) {
+            upkeepID = uint256(keccak256(abi.encodePacked(blockhash(block.number - 1), address(i_registry), uint32(oldNonce))));
+            return upkeepID;
+        } else {
+            revert Bet__RegisterAndPredictID();
         }
-        upkeepID = akr.registerAndPredictID(_name, address(this), _gasLimit, address(msg.sender), _amount);
     }
 
     /**
@@ -182,7 +225,6 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
     /**
      * @dev able a player to cancel all his bet
      */
-
     function cancelBet() public payable matchStarted {
         uint256 homeBetAmount = s_playerWhoBetHomeToAmount[msg.sender];
         uint256 awayBetAmount = s_playerWhoBetAwayToAmount[msg.sender];
@@ -192,22 +234,22 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
             revert Bet__ZeroBalance();
         }
 
-        (bool success, ) = msg.sender.call{value: homeBetAmount + awayBetAmount + drawBetAmount}("");
-        if (!success) {
-            revert Bet__TransferFailed();
-        }
-
         if (homeBetAmount > 0) {
-            s_playerWhoBetHomeToAmount[msg.sender] = 0;
+            delete (s_playerWhoBetHomeToAmount[msg.sender]);
             s_totalBetHome -= homeBetAmount;
         }
         if (awayBetAmount > 0) {
-            s_playerWhoBetAwayToAmount[msg.sender] = 0;
+            delete (s_playerWhoBetAwayToAmount[msg.sender]);
             s_totalBetAway -= awayBetAmount;
         }
         if (drawBetAmount > 0) {
-            s_playerWhoBetDrawToAmount[msg.sender] = 0;
+            delete (s_playerWhoBetDrawToAmount[msg.sender]);
             s_totalBetDraw -= drawBetAmount;
+        }
+
+        (bool success, ) = msg.sender.call{value: homeBetAmount + awayBetAmount + drawBetAmount}("");
+        if (!success) {
+            revert Bet__TransferFailed();
         }
         emit playerCancelBet(msg.sender);
     }
@@ -291,11 +333,17 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
 
     /** @dev Player quand withdraw their reward by caling this function */
     function withdrawReward() public payable playersNotFundedYet {
-        (bool success, ) = msg.sender.call{value: s_winnerAdressToReward[msg.sender]}("");
+        uint256 reward = s_winnerAdressToReward[msg.sender];
+        if (reward == 0) {
+            revert Bet__NoReward();
+        }
+
+        delete (s_winnerAdressToReward[msg.sender]);
+        (bool success, ) = msg.sender.call{value: reward}("");
+        reward = 0;
         if (!success) {
             revert Bet__TransferFailed();
         }
-        s_winnerAdressToReward[msg.sender] = 0;
     }
 
     /**

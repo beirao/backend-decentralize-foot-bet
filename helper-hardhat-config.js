@@ -22,6 +22,8 @@ const networkConfig = {
         registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
         registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
         ethUsdPriceFeed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        gasLimitKeeper: "999",
+        amountSendToKeeper: "5010000000000000000", // "5010000000000000000" # 5.01 LINK
     },
     42: {
         name: "kovan",
@@ -34,6 +36,13 @@ const networkConfig = {
         registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
         registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
     },
+    1: {
+        name: "mainnet",
+        linkToken: "0x514910771af9ca656af840dff83e8264ecf986ca",
+        fundAmount: "6010000000000000000", // 6.01 LINK : 1 for Bet 5.01 for Keeper
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
+    },
     4: {
         name: "rinkeby",
         linkToken: "0x01be23585060835e02b77ef475b0cc51aa1e0709",
@@ -42,24 +51,24 @@ const networkConfig = {
         vrfCoordinator: "0x6168499c0cFfCaCD319c818142124B7A15E857ab",
         oracle: "0xf3FBB7f3391F62C8fe53f89B41dFC8159EE9653f",
         jobId: "c1c5e92880894eb6b27d3cae19670aa3", // get > bool
-        fundAmount: "100000000000000000", // 0.1
+        fundAmount: "6010000000000000000", // 6.01 LINK : 1 for Bet 5.01 for Keeper
         fee: "100000000000000000",
-        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
-        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
-    },
-    1: {
-        name: "mainnet",
-        linkToken: "0x514910771af9ca656af840dff83e8264ecf986ca",
-        fundAmount: "0",
+        gasLimitKeeper: "999",
+        amountSendToKeeper: "5010000000000000000", // "5010000000000000000" # 5.01 LINKs
         registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
         registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
     },
     5: {
         name: "goerli",
+        fee: "100000000000000000",
         linkToken: "0x326c977e6efc84e512bb9c30f76e30c160ed06fb",
         registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
         registrarAddress: "0x9806cf6fBc89aBF286e8140C42174B94836e36F2",
-        fundAmount: "0",
+        fundAmount: "6010000000000000000", // 6.01 LINK : 1 for Bet 5.01 for Keeper
+        gasLimitKeeper: "999",
+        amountSendToKeeper: "5010000000000000000", // "5010000000000000000" # 5.01 LINK
+        oracle: "0xf3FBB7f3391F62C8fe53f89B41dFC8159EE9653f",
+        jobId: "c1c5e92880894eb6b27d3cae19670aa3", // get > bool
         fee: "100000000000000000",
     },
     137: {

@@ -17,6 +17,7 @@ const RINKEBY_RPC_URL = process.env.RINKEBY_RPC_URL || "https://eth-rinkeby.alch
 const KOVAN_RPC_URL = process.env.KOVAN_RPC_URL || "https://eth-kovan.alchemyapi.io/v2/your-api-key"
 const POLYGON_MAINNET_RPC_URL = process.env.POLYGON_MAINNET_RPC_URL || "https://polygon-mainnet.alchemyapi.io/v2/your-api-key"
 const PRIVATE_KEY = process.env.PRIVATE_KEY
+const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL
 // optional
 const MNEMONIC = process.env.MNEMONIC || "Your mnemonic"
 const FORKING_BLOCK_NUMBER = process.env.FORKING_BLOCK_NUMBER
@@ -28,6 +29,7 @@ const REPORT_GAS = process.env.REPORT_GAS || false
 
 module.exports = {
     defaultNetwork: "hardhat",
+    allowUnlimitedContractSize: true,
     networks: {
         hardhat: {
             // If you want to do some forking set `enabled` to true
@@ -58,6 +60,12 @@ module.exports = {
             //   },
             saveDeployments: true,
             chainId: 4,
+        },
+        goerli: {
+            url: GOERLI_RPC_URL,
+            accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
+            saveDeployments: true,
+            chainId: 5,
         },
         mainnet: {
             url: MAINNET_RPC_URL,

@@ -1,4 +1,4 @@
-const { getNamedAccounts, deployments, network } = require("hardhat")
+const { getNamedAccounts, deployments, network, run } = require("hardhat")
 const {
     networkConfig,
     developmentChains,
@@ -45,11 +45,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         waitConfirmations: waitBlockConfirmations,
     })
 
-    if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
-        log("Verifying...")
-        await verify(bet.address, args)
-    }
-
     // Checking for funding...
     if (networkConfig[chainId]["fundAmount"] && networkConfig[chainId]["fundAmount"] > 0) {
         log("Funding with LINK...")
@@ -57,12 +52,41 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             await hre.run("fund-link", {
                 contract: bet.address,
                 linkaddress: linkTokenAddress,
+                fundAmt: networkConfig[chainId]["fundAmount"],
             })
             console.log("Contract funded with LINK")
         } else {
             console.log("Contract already has LINK!")
         }
     }
+    betTemp = await ethers.getContract("Bet", deployer)
+
+    if (!developmentChains.includes(network.name)) {
+        log("Keeper registration...")
+
+        console.log(
+            `gas : ${networkConfig[chainId]["gasLimitKeeper"]} ||| amount ${networkConfig[chainId]["amountSendToKeeper"]}`
+        )
+        await betTemp.registerAndPredictID(
+            `matchID : ${matchId}`,
+            networkConfig[chainId]["gasLimitKeeper"],
+            networkConfig[chainId]["amountSendToKeeper"],
+            { gasLimit: 30000000 }
+        )
+        // await tx.wait(1)
+
+        // bet["registerAndPredictID(string ,uint32 ,uint96)"](
+        //     `matchID : ${matchId}`,
+        //     networkConfig[chainId]["gasLimitKeeper"],
+        //     networkConfig[chainId]["amountSendToKeeper"]
+        // )
+    }
+    if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
+        await verify(betTemp.address, betTemp.args)
+    }
+
+    log("Upkeep ID : ", (await betTemp.getUpkeepID()).toString())
+    // log("Upkeep ID : ", tx)
 
     log("Run Bet contract with following command:")
     const networkName = network.name == "hardhat" ? "localhost" : network.name

@@ -404,7 +404,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
 
                       await bet.withdrawReward()
                       await accConnection1.withdrawReward()
-                      await accConnection2.withdrawReward()
+                      await expect(accConnection2.withdrawReward()).to.be.revertedWith("Bet__NoReward")
 
                       assert.equal((await bet.getContractBalance()).toString(), "0")
                   })
@@ -416,7 +416,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       // EA ret 1 => home win
 
                       await bet.withdrawReward()
-                      await accConnection1.withdrawReward()
+                      await expect(accConnection1.withdrawReward()).to.be.revertedWith("Bet__NoReward")
                       await accConnection2.withdrawReward()
 
                       assert.equal((await bet.getContractBalance()).toString(), "0")
@@ -429,8 +429,8 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       // EA ret 1 => home win
 
                       await bet.withdrawReward()
-                      await accConnection1.withdrawReward()
-                      await accConnection2.withdrawReward()
+                      await expect(accConnection1.withdrawReward()).to.be.revertedWith("Bet__NoReward")
+                      await expect(accConnection2.withdrawReward()).to.be.revertedWith("Bet__NoReward")
 
                       assert.equal((await bet.getContractBalance()).toString(), "0")
                   })

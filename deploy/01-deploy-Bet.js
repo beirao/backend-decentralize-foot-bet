@@ -12,6 +12,8 @@ const { autoFundCheck, verify } = require("../helper-functions")
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log, get } = deployments
     const { deployer } = await getNamedAccounts()
+    console.log("deployer : ", deployer)
+
     const chainId = network.config.chainId
     let linkTokenAddress
     let oracle
@@ -61,26 +63,26 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
     betTemp = await ethers.getContract("Bet", deployer)
 
-    if (!developmentChains.includes(network.name)) {
-        log("Keeper registration...")
+    // if (!developmentChains.includes(network.name)) {
+    //     log("Keeper registration...")
 
-        console.log(
-            `gas : ${networkConfig[chainId]["gasLimitKeeper"]} ||| amount ${networkConfig[chainId]["amountSendToKeeper"]}`
-        )
-        await betTemp.registerAndPredictID(
-            `matchID : ${matchId}`,
-            networkConfig[chainId]["gasLimitKeeper"],
-            networkConfig[chainId]["amountSendToKeeper"],
-            { gasLimit: 30000000 }
-        )
-        // await tx.wait(1)
+    //     console.log(
+    //         `gas : ${networkConfig[chainId]["gasLimitKeeper"]} ||| amount ${networkConfig[chainId]["amountSendToKeeper"]}`
+    //     )
+    //     await betTemp.registerAndPredictID(
+    //         `matchID : ${matchId}`,
+    //         networkConfig[chainId]["gasLimitKeeper"],
+    //         networkConfig[chainId]["amountSendToKeeper"],
+    //         { gasLimit: 30000000 }
+    //     )
+    // await tx.wait(1)
 
-        // bet["registerAndPredictID(string ,uint32 ,uint96)"](
-        //     `matchID : ${matchId}`,
-        //     networkConfig[chainId]["gasLimitKeeper"],
-        //     networkConfig[chainId]["amountSendToKeeper"]
-        // )
-    }
+    // bet["registerAndPredictID(string ,uint32 ,uint96)"](
+    //     `matchID : ${matchId}`,
+    //     networkConfig[chainId]["gasLimitKeeper"],
+    //     networkConfig[chainId]["amountSendToKeeper"]
+    // )
+    // }
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
         await verify(betTemp.address, betTemp.args)
     }

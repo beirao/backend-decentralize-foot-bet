@@ -175,7 +175,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
           })
           describe("Test upkeep", function () {
               it("Test only timestamp = true", async function () {
-                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT + 1] })
+                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT + 100] })
                   await network.provider.request({ method: "evm_mine", params: [] })
                   // callStatic permit to simulate the transaction without really sending it
                   const { upkeepNeeded } = await bet.callStatic.checkUpkeep([])
@@ -198,7 +198,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   await bet.toBet(2, { value: BET_PRICE })
                   await (await bet.toBet(3, { value: BET_PRICE })).wait(1)
 
-                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT * 2] })
+                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT * 2 + 100] })
                   await network.provider.request({ method: "evm_mine", params: [] })
                   const { upkeepNeeded } = await bet.callStatic.checkUpkeep([])
                   assert(upkeepNeeded)
@@ -239,14 +239,14 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
               })
               describe("Test API EA", function () {
                   it("Should successfully make an API request", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       expect(requestId).to.not.be.null
                   })
 
                   it("Should successfully make an API request and get a result HOME", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       const callbackValue = 1 // HOME win
@@ -256,7 +256,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       assert.equal(await bet.getWinner(), "1")
                   })
                   it("Should successfully make an API request and get a result AWAY", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       const callbackValue = 2 // AWAY win
@@ -266,7 +266,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       assert.equal(await bet.getWinner(), "2")
                   })
                   it("Should successfully make an API request and get a result DRAW", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       const callbackValue = 3 // DRAW win
@@ -276,7 +276,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       assert.equal(await bet.getWinner(), "3")
                   })
                   it("Should successfully make an API request and get a result CANCEL + check balance consistency", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       const callbackValue = 4 // Match cancel
@@ -290,7 +290,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   beforeEach(async () => {
                       await accConnection1.toBet(1, { value: BET_PRICE })
                       await accConnection2.toBet(2, { value: BET_PRICE })
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(4))).wait(1) // EA ret 4 => match cancel
@@ -325,7 +325,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       )
                   })
                   it("Test owner taxe", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       const oldDeployerBalance = await accounts[0].getBalance()
@@ -337,7 +337,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       assert.isTrue(oldDeployerBalance < (await accounts[0].getBalance()))
                   })
                   it("Test home win", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(1))).wait(1) // EA ret 1 => home win
@@ -350,7 +350,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       assert.equal((await accConnection2.getReward()).toString(), "0")
                   })
                   it("Test away win", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(2))).wait(1) // EA ret 2 => away win
@@ -363,7 +363,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       )
                   })
                   it("Test draw win", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(3))).wait(1) // EA ret 3 => draw win
@@ -373,7 +373,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       assert.equal((await accConnection2.getReward()).toString(), "0")
                   })
                   it("Test erroned value refundAll", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(6))).wait(1) // EA ret 3 => draw win
@@ -383,7 +383,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       assert.equal((await accConnection2.getReward()).toString(), BET_PRICE)
                   })
                   it("Test link withdraw", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(2))).wait(1) // EA ret 2 => away win
@@ -396,7 +396,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       await accConnection2.toBet(2, { value: BET_PRICE })
                   })
                   it("Test home win", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(1))).wait(1)
@@ -404,38 +404,38 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
 
                       await bet.withdrawReward()
                       await accConnection1.withdrawReward()
-                      await accConnection2.withdrawReward()
+                      await expect(accConnection2.withdrawReward()).to.be.revertedWith("Bet__NoReward")
 
                       assert.equal((await bet.getContractBalance()).toString(), "0")
                   })
                   it("Test away win", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(2))).wait(1)
                       // EA ret 1 => home win
 
                       await bet.withdrawReward()
-                      await accConnection1.withdrawReward()
+                      await expect(accConnection1.withdrawReward()).to.be.revertedWith("Bet__NoReward")
                       await accConnection2.withdrawReward()
 
                       assert.equal((await bet.getContractBalance()).toString(), "0")
                   })
                   it("Test draw win", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(3))).wait(1)
                       // EA ret 1 => home win
 
                       await bet.withdrawReward()
-                      await accConnection1.withdrawReward()
-                      await accConnection2.withdrawReward()
+                      await expect(accConnection1.withdrawReward()).to.be.revertedWith("Bet__NoReward")
+                      await expect(accConnection2.withdrawReward()).to.be.revertedWith("Bet__NoReward")
 
                       assert.equal((await bet.getContractBalance()).toString(), "0")
                   })
                   it("Test cancel", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(4))).wait(1)
@@ -448,7 +448,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       assert.equal((await bet.getContractBalance()).toString(), "0")
                   })
                   it("Test erroned value refundAll", async () => {
-                      const tx = await bet.requestWinnerData()
+                      const tx = await bet.performUpkeep("0x")
                       const txr = await tx.wait(1)
                       const requestId = txr.events[0].args.id
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(40))).wait(1)

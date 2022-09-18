@@ -4,6 +4,8 @@ pragma solidity ^0.8.16;
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "@chainlink/contracts/src/v0.8/KeeperCompatible.sol";
+import "./utils/ReentrancyGuard.sol";
+
 // import "hardhat/console.sol";
 
 // Errors
@@ -16,13 +18,14 @@ error Bet__NotPlayer(address addr);
 error Bet__SendMoreEth();
 error Bet__MatchStarted();
 error Bet__PlayersNotFundedYet();
+error Bet__NoReward();
 
 /**@title A sample Football bet Contract
  * @author Thomas MARQUES
  * @notice This contract is for creating a sample Football bet Contract
  * @dev This implements a Chainlink external adapter and a chainlink keeper
  */
-contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
+contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, ReentrancyGuard {
     using Chainlink for Chainlink.Request;
 
     // States Vars
@@ -75,6 +78,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
     // Chainlink var
     bytes32 private immutable i_jobId;
     uint256 private immutable i_fee;
+    string private s_apiLink;
 
     // Events
     event playerBetting(matchState ms, address indexed playerAdrr);
@@ -101,10 +105,11 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
         string memory _matchId,
         uint256 _matchTimeStamp,
         address _oracleAddress,
+        string memory _apiLink,
         bytes32 _jobId,
         uint256 _fee,
         address _linkAddress
-    ) ConfirmedOwner(msg.sender) {
+    ) ConfirmedOwner(msg.sender) ReentrancyGuard() {
         // Global
         i_owner = msg.sender;
         s_matchId = _matchId;
@@ -120,6 +125,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
         setChainlinkOracle(_oracleAddress);
         i_jobId = _jobId;
         i_fee = _fee;
+        s_apiLink = _apiLink;
     }
 
     // Utils functions
@@ -155,8 +161,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
     /**
      * @dev able a player to cancel all his bet
      */
-
-    function cancelBet() public payable matchStarted {
+    function cancelBet() public payable matchStarted nonReentrant {
         uint256 homeBetAmount = s_playerWhoBetHomeToAmount[msg.sender];
         uint256 awayBetAmount = s_playerWhoBetAwayToAmount[msg.sender];
         uint256 drawBetAmount = s_playerWhoBetDrawToAmount[msg.sender];
@@ -165,22 +170,22 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
             revert Bet__ZeroBalance();
         }
 
-        (bool success, ) = msg.sender.call{value: homeBetAmount + awayBetAmount + drawBetAmount}("");
-        if (!success) {
-            revert Bet__TransferFailed();
-        }
-
         if (homeBetAmount > 0) {
-            s_playerWhoBetHomeToAmount[msg.sender] = 0;
+            delete (s_playerWhoBetHomeToAmount[msg.sender]);
             s_totalBetHome -= homeBetAmount;
         }
         if (awayBetAmount > 0) {
-            s_playerWhoBetAwayToAmount[msg.sender] = 0;
+            delete (s_playerWhoBetAwayToAmount[msg.sender]);
             s_totalBetAway -= awayBetAmount;
         }
         if (drawBetAmount > 0) {
-            s_playerWhoBetDrawToAmount[msg.sender] = 0;
+            delete (s_playerWhoBetDrawToAmount[msg.sender]);
             s_totalBetDraw -= drawBetAmount;
+        }
+
+        (bool success, ) = msg.sender.call{value: homeBetAmount + awayBetAmount + drawBetAmount}("");
+        if (!success) {
+            revert Bet__TransferFailed();
         }
         emit playerCancelBet(msg.sender);
     }
@@ -263,12 +268,18 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
     }
 
     /** @dev Player quand withdraw their reward by caling this function */
-    function withdrawReward() public payable playersNotFundedYet {
-        (bool success, ) = msg.sender.call{value: s_winnerAdressToReward[msg.sender]}("");
+    function withdrawReward() public payable playersNotFundedYet nonReentrant {
+        uint256 reward = s_winnerAdressToReward[msg.sender];
+        if (reward == 0) {
+            revert Bet__NoReward();
+        }
+
+        delete (s_winnerAdressToReward[msg.sender]);
+        (bool success, ) = msg.sender.call{value: reward}("");
+        reward = 0;
         if (!success) {
             revert Bet__TransferFailed();
         }
-        s_winnerAdressToReward[msg.sender] = 0;
     }
 
     /**
@@ -317,9 +328,17 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface {
      * And call requestWinnerData() that reach the needed data by making an API
      * call by running a job (build with an external adapter) on a chainlink node.
      */
-    function requestWinnerData() public returns (bytes32 requestId) {
+    function requestWinnerData() private returns (bytes32 requestId) {
+        (bool upkeepNeeded, ) = checkUpkeep("");
+        if (!upkeepNeeded) {
+            revert Bet__UpkeepNotNeeded(address(this).balance, uint256(s_betState));
+        }
         Chainlink.Request memory req = buildChainlinkRequest(i_jobId, address(this), this.fulfill.selector);
-        req.add("matchId", s_matchId);
+
+        // Set the URL to perform the GET request on
+        req.add("get", string.concat(s_apiLink, s_matchId));
+
+        req.add("path", "ret");
 
         // Sends the request
         return sendChainlinkRequest(req, i_fee);

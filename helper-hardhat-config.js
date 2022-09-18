@@ -9,6 +9,8 @@ const networkConfig = {
         keyHash: "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc",
         jobId: "29fa9aa13bf1468788b7cc4a500a45b8",
         fundAmount: "1000000000000000000",
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
         keepersUpdateInterval: "30",
     },
     31337: {
@@ -17,7 +19,11 @@ const networkConfig = {
         keyHash: "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc",
         jobId: "29fa9aa13bf1468788b7cc4a500a45b8",
         fundAmount: "1000000000000000000",
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
         ethUsdPriceFeed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        gasLimitKeeper: "999",
+        amountSendToKeeper: "5010000000000000000", // "5010000000000000000" # 5.01 LINK
     },
     42: {
         name: "kovan",
@@ -27,6 +33,15 @@ const networkConfig = {
         jobId: "c1c5e92880894eb6b27d3cae19670aa3", // get > bool
         fundAmount: "100000000000000000", // 0.1
         fee: "100000000000000000",
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
+    },
+    1: {
+        name: "mainnet",
+        linkToken: "0x514910771af9ca656af840dff83e8264ecf986ca",
+        fundAmount: "6010000000000000000", // 6.01 LINK : 1 for Bet 5.01 for Keeper
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
     },
     4: {
         name: "rinkeby",
@@ -35,19 +50,25 @@ const networkConfig = {
         keyHash: "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc",
         vrfCoordinator: "0x6168499c0cFfCaCD319c818142124B7A15E857ab",
         oracle: "0xf3FBB7f3391F62C8fe53f89B41dFC8159EE9653f",
-        jobId: "c1c5e92880894eb6b27d3cae19670aa3", // get > bool
-        fundAmount: "100000000000000000", // 0.1
+        jobId: "ca98366cc7314957b8c012c72f05aeeb", // get > bool
+        fundAmount: "6010000000000000000", // 6.01 LINK : 1 for Bet 5.01 for Keeper
         fee: "100000000000000000",
-    },
-    1: {
-        name: "mainnet",
-        linkToken: "0x514910771af9ca656af840dff83e8264ecf986ca",
-        fundAmount: "0",
+        gasLimitKeeper: "9999999",
+        amountSendToKeeper: "5010000000000000000", // "5010000000000000000" # 5.01 LINKs
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
     },
     5: {
         name: "goerli",
+        fee: "100000000000000000",
         linkToken: "0x326c977e6efc84e512bb9c30f76e30c160ed06fb",
-        fundAmount: "0",
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0x9806cf6fBc89aBF286e8140C42174B94836e36F2",
+        fundAmount: "6010000000000000000", // 6.01 LINK : 1 for Bet 5.01 for Keeper
+        gasLimitKeeper: "9999999",
+        amountSendToKeeper: "5010000000000000000", // "5010000000000000000" # 5.01 LINK
+        oracle: "0xCC79157eb46F5624204f47AB42b3906cAA40eaB7",
+        jobId: "ca98366cc7314957b8c012c72f05aeeb", // get > bool
         fee: "100000000000000000",
     },
     137: {
@@ -58,6 +79,8 @@ const networkConfig = {
         jobId: "12b86114fa9e46bab3ca436f88e1a912",
         fee: "100000000000000",
         fundAmount: "100000000000000",
+        registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
+        registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
     },
 }
 

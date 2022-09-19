@@ -17,6 +17,8 @@ const RINKEBY_RPC_URL = process.env.RINKEBY_RPC_URL || "https://eth-rinkeby.alch
 const KOVAN_RPC_URL = process.env.KOVAN_RPC_URL || "https://eth-kovan.alchemyapi.io/v2/your-api-key"
 const POLYGON_MAINNET_RPC_URL = process.env.POLYGON_MAINNET_RPC_URL || "https://polygon-mainnet.alchemyapi.io/v2/your-api-key"
 const PRIVATE_KEY = process.env.PRIVATE_KEY
+const PRIVATE_KEY1 = process.env.PRIVATE_KEY1
+const PRIVATE_KEY2 = process.env.PRIVATE_KEY2
 const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL
 // optional
 const MNEMONIC = process.env.MNEMONIC || "Your mnemonic"
@@ -45,7 +47,7 @@ module.exports = {
         },
         kovan: {
             url: KOVAN_RPC_URL,
-            accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
+            accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY, PRIVATE_KEY1, PRIVATE_KEY2] : [],
             //accounts: {
             //     mnemonic: MNEMONIC,
             // },
@@ -54,7 +56,7 @@ module.exports = {
         },
         rinkeby: {
             url: RINKEBY_RPC_URL,
-            accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
+            accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY, PRIVATE_KEY1, PRIVATE_KEY2] : [],
             //   accounts: {
             //     mnemonic: MNEMONIC,
             //   },
@@ -63,13 +65,13 @@ module.exports = {
         },
         goerli: {
             url: GOERLI_RPC_URL,
-            accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
+            accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY, PRIVATE_KEY1, PRIVATE_KEY2] : [],
             saveDeployments: true,
             chainId: 5,
         },
         mainnet: {
             url: MAINNET_RPC_URL,
-            accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
+            accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY, PRIVATE_KEY1, PRIVATE_KEY2] : [],
             //   accounts: {
             //     mnemonic: MNEMONIC,
             //   },
@@ -78,7 +80,7 @@ module.exports = {
         },
         polygon: {
             url: POLYGON_MAINNET_RPC_URL,
-            accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
+            accounts: PRIVATE_KEY !== undefined ? [PRIVATE_KEY, PRIVATE_KEY1, PRIVATE_KEY2] : [],
             saveDeployments: true,
             chainId: 137,
         },
@@ -87,6 +89,7 @@ module.exports = {
         // yarn hardhat verify --network <NETWORK> <CONTRACT_ADDRESS> <CONSTRUCTOR_PARAMETERS>
         apiKey: {
             rinkeby: ETHERSCAN_API_KEY,
+            goerli: ETHERSCAN_API_KEY,
             kovan: ETHERSCAN_API_KEY,
             polygon: POLYGONSCAN_API_KEY,
         },
@@ -118,6 +121,9 @@ module.exports = {
                 version: "0.8.16",
             },
             {
+                version: "0.8.9",
+            },
+            {
                 version: "0.8.7",
             },
             {
@@ -132,6 +138,6 @@ module.exports = {
         ],
     },
     mocha: {
-        timeout: 200000, // 200 seconds max for running tests
+        timeout: 2 * 24 * 60 * 60, // 200 seconds max for running tests
     },
 }

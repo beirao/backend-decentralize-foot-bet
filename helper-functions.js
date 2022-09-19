@@ -20,11 +20,7 @@ const autoFundCheck = async (contractAddr, networkName, linkTokenAddress, additi
     const contractBalanceBN = await linkTokenContract.balanceOf(contractAddr)
     const contractBalance = await contractBalanceBN.toString()
 
-    console.log("balance ", typeof balance)
-    console.log("amountt ", typeof amount)
-    console.log("balance > amount ", balance > amount)
-
-    if (!(balance > amount) && amount > 0 && contractBalance < amount) {
+    if (amount > 0 && contractBalance < amount) {
         //user has enough LINK to auto-fund
         //and the contract isn't already funded
         return true

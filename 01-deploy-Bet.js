@@ -14,9 +14,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log, get } = deployments
     const { deployer } = await getNamedAccounts()
     const chainId = network.config.chainId
-    let linkTokenAddress, timeout, apiUrl
+    let linkTokenAddress
     let matchTimestamp
-    let oracle
+    let oracle, timeout, matchId, apiUrl, timeoutTest
     let additionalMessage = ""
     //set log level to ignore non errors
     ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.ERROR)
@@ -27,7 +27,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         linkTokenAddress = linkToken.address
         oracle = MockOracle.address
         additionalMessage = " --linkaddress " + linkTokenAddress
-        timeout = TIMEOUT
         matchTimestamp = Math.trunc(Date.now() * 0.001) + TIMEOUT // the match will start 1 day after the contract deployment
         apiUrl = process.env.API_URL
     } else {
@@ -43,21 +42,20 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     log("deployer : ", deployer)
     log("linkTokenAddress : ", linkTokenAddress)
 
-    const matchId = "777"
+    matchId = "777"
     const jobId = ethers.utils.toUtf8Bytes(networkConfig[chainId]["jobId"])
     const fee = networkConfig[chainId]["fee"]
     const waitBlockConfirmations = developmentChains.includes(network.name) ? 1 : VERIFICATION_BLOCK_CONFIRMATIONS
 
     const args = [matchId, matchTimestamp, timeout, oracle, apiUrl, jobId, fee, linkTokenAddress]
-    log("arg", args)
     const bet = await deploy("Bet", {
         from: deployer,
         args: args,
         log: true,
         waitConfirmations: waitBlockConfirmations,
     })
-
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
+        log("Verifying...")
         await verify(bet.address, args)
     }
 

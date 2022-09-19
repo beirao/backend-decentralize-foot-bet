@@ -33,8 +33,6 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
               accConnection1 = bet.connect(accounts[1])
               accConnection2 = bet.connect(accounts[2])
               accConnection3 = bet.connect(accounts[3])
-
-              await hre.run("fund-link", { contract: bet.address, linkaddress: linkTokenAddress })
           })
           describe("Constructor", function () {
               it("Check vars initialisation", async () => {
@@ -47,7 +45,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   assert.equal(await bet.getSmartContractState(), "0")
               })
               it("Test link withdraw", async () => {
-                  assert.equal((await linkToken.balanceOf(bet.address)).toString(), ethers.utils.parseEther("2"))
+                  assert.equal((await linkToken.balanceOf(bet.address)).toString(), ethers.utils.parseEther("1"))
               })
           })
           describe("Enter a bet", function () {
@@ -110,7 +108,6 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
 
                   const txr = await tx3.wait(1)
               })
-
               it("Revert zero balance", async function () {
                   await expect(accConnection3.cancelBet()).to.be.revertedWith("Bet__ZeroBalance")
               })
@@ -321,7 +318,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   it("Test linkk", async () => {
                       assert.equal(
                           (await linkToken.balanceOf(bet.address)).toString(),
-                          ethers.utils.parseEther("2") - ethers.utils.parseEther("0.1") /* the bet.performUpkeep("0x") fee */
+                          ethers.utils.parseEther("1") - ethers.utils.parseEther("0.1") /* the bet.performUpkeep("0x") fee */
                       )
                   })
                   it("Test owner taxe", async () => {
@@ -331,8 +328,8 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                       const oldDeployerBalance = await accounts[0].getBalance()
                       await (await mockOracle.fulfillOracleRequest(requestId, numToBytes32(1))).wait(1) // EA ret 3 => draw win
 
-                      console.log("oldDeployerBalance ", oldDeployerBalance.toString())
-                      console.log("newDeployerBalance ", (await accounts[0].getBalance()).toString())
+                      //   console.log("oldDeployerBalance ", oldDeployerBalance.toString())
+                      //   console.log("newDeployerBalance ", (await accounts[0].getBalance()).toString())
 
                       assert.isTrue(oldDeployerBalance < (await accounts[0].getBalance()))
                   })

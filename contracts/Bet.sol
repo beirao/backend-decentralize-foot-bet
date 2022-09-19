@@ -64,7 +64,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
     address private immutable i_owner;
     uint256 private constant FEE = 200000000000; // % * 10⁵ basis points // fees deducted from the total balance of bets
     uint256 private constant MINIMUM_BET = 10000000000000; // 0.00001 eth
-    uint256 private constant TIMEOUT = 24 * 60 * 60; // 1 jour
+    uint256 private immutable i_timeout; // 1 jour
     contractState private s_betState;
     string private s_matchId;
     uint256 private immutable i_matchTimeStamp;
@@ -104,6 +104,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
     constructor(
         string memory _matchId,
         uint256 _matchTimeStamp,
+        uint256 _timeout,
         address _oracleAddress,
         string memory _apiLink,
         bytes32 _jobId,
@@ -119,6 +120,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
         s_totalBetAway = 0;
         s_totalBetDraw = 0;
         s_winner = matchState.NOT_ENDED;
+        i_timeout = _timeout;
 
         // Chainlink
         setChainlinkToken(_linkAddress);
@@ -303,7 +305,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
         )
     {
         bool isStarted = (s_betState == contractState.PLANNED);
-        bool isSupposedFinish = ((block.timestamp - i_matchTimeStamp) > TIMEOUT);
+        bool isSupposedFinish = ((block.timestamp - i_matchTimeStamp) > i_timeout);
         bool hasPlayersWhoBetHome = (s_totalBetHome >= MINIMUM_BET);
         bool hasPlayersWhoBetAway = (s_totalBetAway >= MINIMUM_BET);
         bool hasPlayersWhoBetDraw = (s_totalBetDraw >= MINIMUM_BET);
@@ -399,8 +401,8 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
         return MINIMUM_BET;
     }
 
-    function getTimeout() public pure returns (uint256) {
-        return TIMEOUT;
+    function getTimeout() public view returns (uint256) {
+        return i_timeout;
     }
 
     function getAddressToAmountBetOnHome(address _fundingAddress) public view returns (uint256) {

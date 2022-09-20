@@ -92,7 +92,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
         _;
     }
     modifier matchStarted() {
-        if (s_betState != contractState.PLANNED) revert Bet__MatchStarted();
+        if (block.timestamp >= i_matchTimeStamp) revert Bet__MatchStarted();
         _;
     }
     modifier playersNotFundedYet() {
@@ -353,6 +353,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
         emit RequestWinner(_requestId, _matchState);
         if (_matchState == 0) {
             s_betState = contractState.STARTED;
+            s_winner = matchState.NOT_ENDED;
         } else if (_matchState == 1) {
             s_betState = contractState.ENDED;
             s_winner = matchState.HOME;
@@ -363,6 +364,9 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
             s_betState = contractState.ENDED;
             s_winner = matchState.DRAW;
         } else if (_matchState == 4) {
+            s_betState = contractState.CANCELLED;
+            s_winner = matchState.CANCELLED;
+        } else {
             s_betState = contractState.CANCELLED;
             s_winner = matchState.CANCELLED;
         }
@@ -389,8 +393,8 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
     }
 
     // Getter functions
-    function getReward() public view playersNotFundedYet returns (uint256) {
-        return s_winnerAdressToReward[msg.sender];
+    function getReward(address addr) public view playersNotFundedYet returns (uint256) {
+        return s_winnerAdressToReward[addr];
     }
 
     function getFee() public pure returns (uint256) {
@@ -459,9 +463,5 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
 
     function getWinner() public view returns (matchState) {
         return s_winner;
-    }
-
-    function getNumberOfPlayersWhoBtDraw() public view returns (uint256) {
-        return s_playerArrayWhoBetDraw.length;
     }
 }

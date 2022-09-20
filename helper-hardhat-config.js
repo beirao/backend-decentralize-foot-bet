@@ -50,9 +50,9 @@ const networkConfig = {
         keyHash: "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc",
         vrfCoordinator: "0x6168499c0cFfCaCD319c818142124B7A15E857ab",
         oracle: "0xf3FBB7f3391F62C8fe53f89B41dFC8159EE9653f",
-        jobId: "ca98366cc7314957b8c012c72f05aeeb", // get > bool
-        fundAmount: "1000000000000000000", // 6.01 LINK : 1 for Bet 5.01 for Keeper
-        fee: "100000000000000000",
+        jobId: "ca98366cc7314957b8c012c72f05aeeb", // get > unint256
+        fundAmount: "1000000000000000000", // 1link
+        fee: "1000000000000000000",
         gasLimitKeeper: "9999999",
         amountSendToKeeper: "5010000000000000000", // "5010000000000000000" # 5.01 LINKs
         registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
@@ -60,15 +60,15 @@ const networkConfig = {
     },
     5: {
         name: "goerli",
-        fee: "100000000000000000",
+        fee: "1000000000000000000",
         linkToken: "0x326c977e6efc84e512bb9c30f76e30c160ed06fb",
         registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
         registrarAddress: "0x9806cf6fBc89aBF286e8140C42174B94836e36F2",
-        fundAmount: "1000000000000000000", // 6.01 LINK : 1 for Bet 5.01 for Keeper
+        fundAmount: "1000000000000000000", // 1link
         gasLimitKeeper: "9999999",
         amountSendToKeeper: "5010000000000000000", // "5010000000000000000" # 5.01 LINK
         oracle: "0xCC79157eb46F5624204f47AB42b3906cAA40eaB7",
-        jobId: "ca98366cc7314957b8c012c72f05aeeb", // get > bool
+        jobId: "ca98366cc7314957b8c012c72f05aeeb", // get > uint256
         fee: "100000000000000000",
     },
     137: {

@@ -31,11 +31,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         matchTimestamp = Math.trunc(Date.now() * 0.001) + TIMEOUT // the match will start 1 day after the contract deployment
         apiUrl = process.env.API_URL
     } else {
-        timeout = 5 * 60 // 5 minutes
-        // matchTimestamp = Math.trunc(Date.now() * 0.001) + timeout // test purpose
-        matchTimestamp = 1663537312 + 20 * 60
-        apiUrl = "http://127.0.0.1:8000/" || process.env.API_URL
+        timeout = 10 * 60 // 5 minutes
+        matchTimestamp = 1663593013 + 20 * 60
 
+        // matchTimestamp = Math.trunc(Date.now() * 0.001) + timeout // test purpose
+        apiUrl = process.env.API_URL
         linkTokenAddress = networkConfig[chainId]["linkToken"]
         oracle = networkConfig[chainId]["oracle"]
     }
@@ -49,7 +49,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const waitBlockConfirmations = developmentChains.includes(network.name) ? 1 : VERIFICATION_BLOCK_CONFIRMATIONS
 
     const args = [matchId, matchTimestamp, timeout, oracle, apiUrl, jobId, fee, linkTokenAddress]
-    log("arg", args)
     const bet = await deploy("Bet", {
         from: deployer,
         args: args,

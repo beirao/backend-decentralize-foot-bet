@@ -67,6 +67,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         if (await autoFundCheck(bet.address, network.name, linkTokenAddress, additionalMessage)) {
             await hre.run("fund-link", {
                 contract: bet.address,
+                fundAmt: networkConfig[chainId]["fundAmount"],
                 linkaddress: linkTokenAddress,
             })
         } else {

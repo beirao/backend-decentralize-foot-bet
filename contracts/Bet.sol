@@ -6,7 +6,7 @@ import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "@chainlink/contracts/src/v0.8/KeeperCompatible.sol";
 import "./utils/ReentrancyGuard.sol";
 
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 
 // Errors
 error Bet__UpkeepNotNeeded(uint256 currentBalance, uint256 betState);
@@ -64,11 +64,14 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
     address private immutable i_owner;
     uint256 private constant FEE = 200000000000; // % * 10⁵ basis points // fees deducted from the total balance of bets
     uint256 private constant MINIMUM_BET = 10000000000000; // 0.00001 eth
-    uint256 private immutable i_timeout; // 1 jour
+    uint256 private s_timeout; // 1 jour
+    uint256 private immutable i_timeoutStep;
     contractState private s_betState;
     string private s_matchId;
     uint256 private immutable i_matchTimeStamp;
     uint256 private s_lastTimeStamp;
+    uint256 private s_countPerformUpkeep;
+    uint8 private constant NB_OF_TRIES = 5;
 
     // Results vars
     uint8 private s_homeScore;
@@ -120,7 +123,9 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
         s_totalBetAway = 0;
         s_totalBetDraw = 0;
         s_winner = matchState.NOT_ENDED;
-        i_timeout = _timeout;
+        s_timeout = _timeout;
+        i_timeoutStep = _timeout;
+        s_countPerformUpkeep = 0;
 
         // Chainlink
         setChainlinkToken(_linkAddress);
@@ -304,11 +309,12 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
             bytes memory /* performData */
         )
     {
-        bool isStarted = (s_betState == contractState.PLANNED);
-        bool isSupposedFinish = ((block.timestamp - i_matchTimeStamp) > i_timeout);
+        bool isStarted = (s_betState == contractState.STARTED || s_betState == contractState.PLANNED);
+        bool isSupposedFinish = (block.timestamp > i_matchTimeStamp + s_timeout);
         bool hasPlayersWhoBetHome = (s_totalBetHome >= MINIMUM_BET);
         bool hasPlayersWhoBetAway = (s_totalBetAway >= MINIMUM_BET);
         bool hasPlayersWhoBetDraw = (s_totalBetDraw >= MINIMUM_BET);
+
         upkeepNeeded = (isStarted && isSupposedFinish && hasPlayersWhoBetHome && hasPlayersWhoBetAway && hasPlayersWhoBetDraw);
     }
 
@@ -351,6 +357,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
      */
     function fulfill(bytes32 _requestId, uint256 _matchState) public recordChainlinkFulfillment(_requestId) {
         emit RequestWinner(_requestId, _matchState);
+
         if (_matchState == 0) {
             s_betState = contractState.STARTED;
             s_winner = matchState.NOT_ENDED;
@@ -371,12 +378,18 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
             s_winner = matchState.CANCELLED;
         }
 
-        if (s_betState == contractState.ENDED) {
-            fundWinners();
-        } else {
+        if (s_betState == contractState.CANCELLED || s_countPerformUpkeep >= NB_OF_TRIES) {
+            s_betState = contractState.CANCELLED;
+            s_winner = matchState.CANCELLED;
             refundAll();
+            autoWithdrawLink();
+        } else if (s_betState == contractState.ENDED) {
+            fundWinners();
+            autoWithdrawLink();
+        } else {
+            s_countPerformUpkeep++;
+            s_timeout += i_timeoutStep;
         }
-        autoWithdrawLink();
     }
 
     /**
@@ -405,8 +418,16 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
         return MINIMUM_BET;
     }
 
+    function getCountPerformUpkeep() public view returns (uint256) {
+        return s_countPerformUpkeep;
+    }
+
     function getTimeout() public view returns (uint256) {
-        return i_timeout;
+        return s_timeout;
+    }
+
+    function getTimeoutStep() public view returns (uint256) {
+        return i_timeoutStep;
     }
 
     function getAddressToAmountBetOnHome(address _fundingAddress) public view returns (uint256) {

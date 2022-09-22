@@ -472,8 +472,201 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   assert.equal((await bet.getContractBalance()).toString(), "0")
               })
           })
+          describe("Test perform upkeep multicall", function () {
+              beforeEach(async () => {
+                  await accConnection1.toBet(1, { value: BET_PRICE })
+                  await accConnection2.toBet(2, { value: BET_PRICE })
+                  await bet.toBet(1, { value: BET_PRICE })
+                  await bet.toBet(2, { value: BET_PRICE })
+                  await (await bet.toBet(3, { value: BET_PRICE })).wait(1)
+                  await network.provider.request({ method: "evm_increaseTime", params: [100] })
+                  await network.provider.request({ method: "evm_mine", params: [] })
+              })
+              it("Upkeep needed false 00", async () => {
+                  assert.equal((await bet.getCountPerformUpkeep()).toString(), "0")
+                  const { upkeepNeeded } = await bet.callStatic.checkUpkeep([])
+                  assert(!upkeepNeeded)
+              })
+              it("performUpkeep iteration x5", async () => {
+                  //-------------------------------------
+                  assert.equal((await bet.getTimeout()).toString(), TIMEOUT)
+                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT * 2] })
+                  await network.provider.request({ method: "evm_mine", params: [] })
+                  const { upkeepNeeded: upkeepNeeded } = await bet.callStatic.checkUpkeep([])
+                  assert(upkeepNeeded)
+                  await (
+                      await mockOracle.fulfillOracleRequest(
+                          (
+                              await (await bet.performUpkeep("0x")).wait(1)
+                          ).events[0].args.id,
+                          numToBytes32(0)
+                      )
+                  ).wait(1)
+
+                  assert.equal((await bet.getCountPerformUpkeep()).toString(), "1")
+                  const { upkeepNeeded: upkeepNeeded1 } = await bet.callStatic.checkUpkeep([])
+                  assert(!upkeepNeeded1)
+                  //------------------------------------
+                  assert.equal((await bet.getTimeout()).toString(), TIMEOUT * 2)
+                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT] })
+                  await network.provider.request({ method: "evm_mine", params: [] })
+                  const { upkeepNeeded: upkeepNeeded2 } = await bet.checkUpkeep([])
+                  assert(upkeepNeeded2)
+                  await (
+                      await mockOracle.fulfillOracleRequest(
+                          (
+                              await (await bet.performUpkeep("0x")).wait(1)
+                          ).events[0].args.id,
+                          numToBytes32(0)
+                      )
+                  ).wait(1)
+
+                  assert.equal((await bet.getCountPerformUpkeep()).toString(), "2")
+                  const { upkeepNeeded: upkeepNeeded4 } = await bet.callStatic.checkUpkeep([])
+                  assert(!upkeepNeeded4)
+                  //------------------------------------
+                  assert.equal((await bet.getTimeout()).toString(), TIMEOUT * 3)
+                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT] })
+                  await network.provider.request({ method: "evm_mine", params: [] })
+                  const { upkeepNeeded: upkeepNeeded5 } = await bet.checkUpkeep([])
+                  assert(upkeepNeeded5)
+                  await (
+                      await mockOracle.fulfillOracleRequest(
+                          (
+                              await (await bet.performUpkeep("0x")).wait(1)
+                          ).events[0].args.id,
+                          numToBytes32(0)
+                      )
+                  ).wait(1)
+
+                  assert.equal((await bet.getCountPerformUpkeep()).toString(), "3")
+                  const { upkeepNeeded: upkeepNeeded6 } = await bet.callStatic.checkUpkeep([])
+                  assert(!upkeepNeeded6)
+                  //------------------------------------
+                  assert.equal((await bet.getTimeout()).toString(), TIMEOUT * 4)
+                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT] })
+                  await network.provider.request({ method: "evm_mine", params: [] })
+                  const { upkeepNeeded: upkeepNeeded7 } = await bet.checkUpkeep([])
+                  assert(upkeepNeeded7)
+                  await (
+                      await mockOracle.fulfillOracleRequest(
+                          (
+                              await (await bet.performUpkeep("0x")).wait(1)
+                          ).events[0].args.id,
+                          numToBytes32(0)
+                      )
+                  ).wait(1)
+
+                  assert.equal((await bet.getCountPerformUpkeep()).toString(), "4")
+                  const { upkeepNeeded: upkeepNeeded8 } = await bet.callStatic.checkUpkeep([])
+                  assert(!upkeepNeeded8)
+                  //------------------------------------
+                  assert.equal((await bet.getTimeout()).toString(), TIMEOUT * 5)
+                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT] })
+                  await network.provider.request({ method: "evm_mine", params: [] })
+                  const { upkeepNeeded: upkeepNeeded9 } = await bet.checkUpkeep([])
+                  assert(upkeepNeeded9)
+                  await (
+                      await mockOracle.fulfillOracleRequest(
+                          (
+                              await (await bet.performUpkeep("0x")).wait(1)
+                          ).events[0].args.id,
+                          numToBytes32(0)
+                      )
+                  ).wait(1)
+
+                  assert.equal((await bet.getCountPerformUpkeep()).toString(), "5")
+                  const { upkeepNeeded: upkeepNeeded10 } = await bet.callStatic.checkUpkeep([])
+                  assert(!upkeepNeeded10)
+                  //------------------------------------
+                  assert.equal((await bet.getTimeout()).toString(), TIMEOUT * 6)
+                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT] })
+                  await network.provider.request({ method: "evm_mine", params: [] })
+                  const { upkeepNeeded: upkeepNeeded11 } = await bet.checkUpkeep([])
+                  assert(upkeepNeeded11)
+
+                  await (
+                      await mockOracle.fulfillOracleRequest(
+                          (
+                              await (await bet.performUpkeep("0x")).wait(1)
+                          ).events[0].args.id,
+                          numToBytes32(0)
+                      )
+                  ).wait(1)
+
+                  assert.equal((await bet.getCountPerformUpkeep()).toString(), "5")
+                  const { upkeepNeeded: upkeepNeeded12 } = await bet.callStatic.checkUpkeep([])
+                  assert(!upkeepNeeded12)
+                  //------------------------------------   Test refund all
+
+                  await expect(bet.toBet(1, { value: BET_PRICE })).to.be.revertedWith("Bet__MatchStarted")
+                  await expect(bet.cancelBet()).to.be.revertedWith("Bet__MatchStarted")
+                  assert.equal(await bet.getHomeBetAmount(), (BET_PRICE * 2).toString())
+                  assert.equal(await bet.getAwayBetAmount(), (BET_PRICE * 2).toString())
+                  assert.equal(await bet.getDrawBetAmount(), BET_PRICE.toString())
+                  assert.equal((await bet.getAddressToAmountBetOnHome(deployer)).toString(), BET_PRICE.toString())
+                  assert.equal(await bet.getAddressToAmountBetOnHome(accounts[1].address), BET_PRICE.toString())
+
+                  assert.equal(await bet.getAddressToAmountBetOnAway(deployer), BET_PRICE.toString())
+                  assert.equal(await bet.getAddressToAmountBetOnAway(accounts[2].address), BET_PRICE.toString())
+
+                  assert.equal(await bet.getAddressToAmountBetOnDraw(deployer), BET_PRICE.toString())
+                  assert.equal(await bet.getSmartContractState(), "5")
+                  assert.equal((await accConnection1.getReward(accounts[1].address)).toString(), BET_PRICE.toString())
+                  assert.equal((await accConnection2.getReward(accounts[2].address)).toString(), BET_PRICE.toString())
+                  assert.equal((await bet.getReward(deployer)).toString(), (BET_PRICE * 3).toString())
+                  assert.equal((await linkToken.balanceOf(bet.address)).toString(), "0")
+              })
+              it("performUpkeep iteration x2", async () => {
+                  //-------------------------------------
+                  assert.equal((await bet.getTimeout()).toString(), TIMEOUT)
+                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT * 2] })
+                  await network.provider.request({ method: "evm_mine", params: [] })
+                  const { upkeepNeeded: upkeepNeeded } = await bet.callStatic.checkUpkeep([])
+                  assert(upkeepNeeded)
+                  await (
+                      await mockOracle.fulfillOracleRequest(
+                          (
+                              await (await bet.performUpkeep("0x")).wait(1)
+                          ).events[0].args.id,
+                          numToBytes32(0)
+                      )
+                  ).wait(1)
+
+                  assert.equal((await bet.getCountPerformUpkeep()).toString(), "1")
+                  const { upkeepNeeded: upkeepNeeded1 } = await bet.callStatic.checkUpkeep([])
+                  assert(!upkeepNeeded1)
+
+                  assert.equal(
+                      (await linkToken.balanceOf(bet.address)).toString(),
+                      ethers.utils.parseEther("1") - ethers.utils.parseEther("0.1") /* the bet.performUpkeep("0x") fee */
+                  )
+                  //------------------------------------
+                  assert.equal((await bet.getTimeout()).toString(), TIMEOUT * 2)
+                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT] })
+                  await network.provider.request({ method: "evm_mine", params: [] })
+                  const { upkeepNeeded: upkeepNeeded2 } = await bet.checkUpkeep([])
+                  assert(upkeepNeeded2)
+                  await (
+                      await mockOracle.fulfillOracleRequest(
+                          (
+                              await (await bet.performUpkeep("0x")).wait(1)
+                          ).events[0].args.id,
+                          numToBytes32(1) // home win
+                      )
+                  ).wait(1)
+
+                  assert.equal((await bet.getCountPerformUpkeep()).toString(), "1")
+                  const { upkeepNeeded: upkeepNeeded4 } = await bet.callStatic.checkUpkeep([])
+                  assert(!upkeepNeeded4)
+                  //------------------------------------ Test fundWinner
+
+                  assert.equal((await bet.getReward(deployer)).toString(), ((BET_PRICE * 5 * (1 - FEE_OWNER)) / 2).toString())
+                  assert.equal(
+                      (await accConnection1.getReward(accounts[1].address)).toString(),
+                      ((BET_PRICE * 5 * (1 - FEE_OWNER)) / 2).toString()
+                  )
+                  assert.equal((await accConnection2.getReward(accounts[2].address)).toString(), "0")
+              })
+          })
       })
-//   it("Test all revert", async () => {
-//     await expect(bet.withdrawReward()).to.be.revertedWith("Bet__MatchNotEnded")
-//     await expect(accConnection1.withdrawReward()).to.be.revertedWith("Bet__MatchNotEnded")
-// })

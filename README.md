@@ -1,7 +1,5 @@
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/smartcontractkit/hardhat-starter-kit)
 
-
-
 # Decentralize Football Bet
 
 Implementation of the following 4 Chainlink features using the [Hardhat](https://hardhat.org/) development environment:
@@ -390,3 +388,15 @@ Contributions are always welcome! Open a PR or an issue!
 
 -   [Chainlink Documentation](https://docs.chain.link/)
 -   [Hardhat Documentation](https://hardhat.org/getting-started/)
+
+## Deploy on Goerli
+
+Change on `node_modules/@appliedblockchain/chainlink-plugins-fund-link/dist/src/config.js`
+
+```js
+    "5": {
+        name: "goerli",
+        linkToken: "0x326c977e6efc84e512bb9c30f76e30c160ed06fb",
+        fundAmount: "1000000000000000000",
+    },
+```

@@ -31,8 +31,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         matchTimestamp = Math.trunc(Date.now() * 0.001) + TIMEOUT // the match will start 1 day after the contract deployment
         apiUrl = process.env.API_URL
     } else {
-        timeout = 10 * 60 // 5 minutes
-        matchTimestamp = 1663593013 + 20 * 60
+        timeout = 1 * 60 // 1 minutes
+        matchTimestamp = 1663854805 + 10 * 60 // 10 minutes
 
         // matchTimestamp = Math.trunc(Date.now() * 0.001) + timeout // test purpose
         apiUrl = process.env.API_URL
@@ -45,10 +45,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const matchId = "777"
     const jobId = ethers.utils.toUtf8Bytes(networkConfig[chainId]["jobId"])
-    const fee = networkConfig[chainId]["fee"]
+    const requestFee = networkConfig[chainId]["requestFee"]
     const waitBlockConfirmations = developmentChains.includes(network.name) ? 1 : VERIFICATION_BLOCK_CONFIRMATIONS
 
-    const args = [matchId, matchTimestamp, timeout, oracle, apiUrl, jobId, fee, linkTokenAddress]
+    const args = [matchId, matchTimestamp, timeout, oracle, apiUrl, jobId, requestFee, linkTokenAddress]
+    console.log("args : ", args)
     const bet = await deploy("Bet", {
         from: deployer,
         args: args,

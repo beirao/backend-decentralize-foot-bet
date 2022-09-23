@@ -18,7 +18,7 @@ error Bet__NotPlayer(address addr);
 error Bet__SendMoreEth();
 error Bet__MatchStarted();
 error Bet__PlayersNotFundedYet();
-error Bet__NoReward();
+error Bet__BetValueIsWrong();
 
 /**@title A sample Football bet Contract
  * @author Thomas MARQUES
@@ -35,7 +35,8 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
         ENDED,
         CANCELLED,
         PLAYERS_FUNDED_ENDED,
-        PLAYERS_FUNDED_CANCELLED
+        PLAYERS_FUNDED_CANCELLED,
+        PLAYERS_FUNDED_NOT_ENOUGH_PLAYERS
     }
     enum matchState {
         NOT_ENDED,
@@ -88,6 +89,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
     event playerCancelBet(address indexed playerAdrr);
     event RequestWinner(bytes32 indexed requestId, uint256 _matchState);
     event RequestBetWinner(bytes32 indexed requestId);
+    event BetEnded(contractState cs, matchState ms);
 
     // Modifiers
     modifier minimumSend() {
@@ -99,8 +101,11 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
         _;
     }
     modifier playersNotFundedYet() {
-        if (!(s_betState == contractState.PLAYERS_FUNDED_ENDED || s_betState == contractState.PLAYERS_FUNDED_CANCELLED))
-            revert Bet__PlayersNotFundedYet();
+        if (getReward(msg.sender) == 0) revert Bet__PlayersNotFundedYet();
+        _;
+    }
+    modifier verifyBetIntegrity(uint256 _betSide) {
+        if (!(_betSide >= 1 && _betSide <= 3)) revert Bet__BetValueIsWrong();
         _;
     }
 
@@ -144,7 +149,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
      * @dev toBet fonction : public function that able every user to bet
      * on a team for a given match.
      */
-    function toBet(matchState _betSide) public payable minimumSend matchStarted {
+    function toBet(matchState _betSide) public payable verifyBetIntegrity(uint256(_betSide)) minimumSend matchStarted {
         if (_betSide == matchState.HOME) {
             s_playerWhoBetHomeToAmount[msg.sender] += msg.value;
             s_playerArrayWhoBetHome.push(payable(msg.sender));
@@ -227,8 +232,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
                 }
             }
             s_betState = contractState.PLAYERS_FUNDED_ENDED;
-        }
-        if (s_winner == matchState.AWAY) {
+        } else if (s_winner == matchState.AWAY) {
             for (uint256 i = 0; i < s_playerArrayWhoBetAway.length; i++) {
                 address winnerAddress = s_playerArrayWhoBetAway[i];
                 uint256 winnerBetAmount = s_playerWhoBetAwayToAmount[winnerAddress];
@@ -240,8 +244,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
                 }
             }
             s_betState = contractState.PLAYERS_FUNDED_ENDED;
-        }
-        if (s_winner == matchState.DRAW) {
+        } else if (s_winner == matchState.DRAW) {
             for (uint256 i = 0; i < s_playerArrayWhoBetDraw.length; i++) {
                 address winnerAddress = s_playerArrayWhoBetDraw[i];
                 uint256 winnerBetAmount = s_playerWhoBetDrawToAmount[winnerAddress];
@@ -255,6 +258,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
             }
             s_betState = contractState.PLAYERS_FUNDED_ENDED;
         }
+        emit BetEnded(getSmartContractState(), getWinner());
     }
 
     /**
@@ -262,7 +266,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
      * This function is called when the match is cancelled
      * or is case of a fatal error.
      */
-    function refundAll() private {
+    function refundAll(bool _hasPlayersBetEnough) private {
         for (uint256 i = 0; i < s_playerArrayTotal.length; i++) {
             address playerAddress = s_playerArrayTotal[i];
 
@@ -271,16 +275,16 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
                 s_playerWhoBetAwayToAmount[playerAddress] +
                 s_playerWhoBetDrawToAmount[playerAddress];
         }
-        s_betState = contractState.PLAYERS_FUNDED_CANCELLED;
+        if (_hasPlayersBetEnough) {
+            s_betState = contractState.PLAYERS_FUNDED_CANCELLED;
+        } else {
+            s_betState = contractState.PLAYERS_FUNDED_NOT_ENOUGH_PLAYERS;
+        }
     }
 
     /** @dev Player quand withdraw their reward by caling this function */
-    function withdrawReward() public payable playersNotFundedYet nonReentrant {
+    function withdrawReward() public playersNotFundedYet nonReentrant {
         uint256 reward = s_winnerAdressToReward[msg.sender];
-        if (reward == 0) {
-            revert Bet__NoReward();
-        }
-
         delete (s_winnerAdressToReward[msg.sender]);
         (bool success, ) = msg.sender.call{value: reward}("");
         reward = 0;
@@ -311,11 +315,8 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
     {
         bool isStarted = (s_betState == contractState.STARTED || s_betState == contractState.PLANNED);
         bool isSupposedFinish = (block.timestamp > i_matchTimeStamp + s_timeout);
-        bool hasPlayersWhoBetHome = (s_totalBetHome >= MINIMUM_BET);
-        bool hasPlayersWhoBetAway = (s_totalBetAway >= MINIMUM_BET);
-        bool hasPlayersWhoBetDraw = (s_totalBetDraw >= MINIMUM_BET);
 
-        upkeepNeeded = (isStarted && isSupposedFinish && hasPlayersWhoBetHome && hasPlayersWhoBetAway && hasPlayersWhoBetDraw);
+        upkeepNeeded = (isStarted && isSupposedFinish);
     }
 
     /*performUpKeep is called when the var upkeepNeeded form checkUpKeep is true*/
@@ -345,8 +346,8 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
 
         // Set the URL to perform the GET request on
         req.add("get", string.concat(s_apiLink, s_matchId));
-
         req.add("path", "ret");
+        req.addInt("times", 1);
 
         // Sends the request
         return sendChainlinkRequest(req, i_fee);
@@ -356,9 +357,15 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
      * Receive the response in the form of uint256
      */
     function fulfill(bytes32 _requestId, uint256 _matchState) public recordChainlinkFulfillment(_requestId) {
+        bool hasPlayersBetEnough = ((s_totalBetHome >= MINIMUM_BET) &&
+            (s_totalBetAway >= MINIMUM_BET) &&
+            (s_totalBetDraw >= MINIMUM_BET));
         emit RequestWinner(_requestId, _matchState);
 
-        if (_matchState == 0) {
+        if (_matchState == 4 || !hasPlayersBetEnough) {
+            s_betState = contractState.CANCELLED;
+            s_winner = matchState.CANCELLED;
+        } else if (_matchState == 0) {
             s_betState = contractState.STARTED;
             s_winner = matchState.NOT_ENDED;
         } else if (_matchState == 1) {
@@ -370,9 +377,6 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
         } else if (_matchState == 3) {
             s_betState = contractState.ENDED;
             s_winner = matchState.DRAW;
-        } else if (_matchState == 4) {
-            s_betState = contractState.CANCELLED;
-            s_winner = matchState.CANCELLED;
         } else {
             s_betState = contractState.CANCELLED;
             s_winner = matchState.CANCELLED;
@@ -381,7 +385,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
         if (s_betState == contractState.CANCELLED || s_countPerformUpkeep >= NB_OF_TRIES) {
             s_betState = contractState.CANCELLED;
             s_winner = matchState.CANCELLED;
-            refundAll();
+            refundAll(hasPlayersBetEnough);
             autoWithdrawLink();
         } else if (s_betState == contractState.ENDED) {
             fundWinners();
@@ -406,7 +410,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
     }
 
     // Getter functions
-    function getReward(address addr) public view playersNotFundedYet returns (uint256) {
+    function getReward(address addr) public view returns (uint256) {
         return s_winnerAdressToReward[addr];
     }
 

@@ -10,7 +10,7 @@ const {
 } = require("../../helper-hardhat-config")
 const { numToBytes32 } = require("@chainlink/test-helpers/dist/src/helpers")
 
-const BET_PRICE = ethers.utils.parseEther("0.1")
+const BET_PRICE = ethers.utils.parseEther("0.01")
 
 !developmentChains.includes(network.name)
     ? describe.skip
@@ -45,7 +45,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   assert.equal(await bet.getSmartContractState(), "0")
               })
               it("Test link withdraw", async () => {
-                  assert.equal((await linkToken.balanceOf(bet.address)).toString(), ethers.utils.parseEther("1"))
+                  assert.equal((await linkToken.balanceOf(bet.address)).toString(), networkConfig[chainId]["fundAmount"])
               })
           })
           describe("Enter a bet", function () {
@@ -53,8 +53,8 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   await expect(bet.toBet(1, { value: MINIMUM_BET - 1 })).to.be.revertedWith("Bet__SendMoreEth")
                   await expect(bet.withdrawReward()).to.be.revertedWith("Bet__PlayersNotFundedYet")
                   await expect(accConnection1.withdrawReward()).to.be.revertedWith("Bet__PlayersNotFundedYet")
-                  await expect(bet.getReward(deployer)).to.be.revertedWith("Bet__PlayersNotFundedYet")
-                  await expect(accConnection1.getReward(deployer)).to.be.revertedWith("Bet__PlayersNotFundedYet")
+                  await assert.equal(await bet.getReward(deployer), "0")
+                  await assert.equal(await accConnection1.getReward(accConnection1.address), "0")
               })
               it("Check variable home bet + event", async function () {
                   const tx = await bet.toBet(1, { value: MINIMUM_BET })
@@ -344,7 +344,8 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
               it("Test linkk", async () => {
                   assert.equal(
                       (await linkToken.balanceOf(bet.address)).toString(),
-                      ethers.utils.parseEther("1") - ethers.utils.parseEther("0.1") /* the bet.performUpkeep("0x") fee */
+                      networkConfig[chainId]["fundAmount"] -
+                          networkConfig[chainId]["requestFee"] /* the bet.performUpkeep("0x") fee */
                   )
               })
               it("Test owner taxe", async () => {
@@ -415,7 +416,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
 
                   await bet.withdrawReward()
                   await accConnection1.withdrawReward()
-                  await expect(accConnection2.withdrawReward()).to.be.revertedWith("Bet__NoReward")
+                  await expect(accConnection2.withdrawReward()).to.be.revertedWith("Bet__PlayersNotFundedYet")
 
                   assert.equal((await bet.getContractBalance()).toString(), "0")
               })
@@ -427,7 +428,7 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   // EA ret 1 => home win
 
                   await bet.withdrawReward()
-                  await expect(accConnection1.withdrawReward()).to.be.revertedWith("Bet__NoReward")
+                  await expect(accConnection1.withdrawReward()).to.be.revertedWith("Bet__PlayersNotFundedYet")
                   await accConnection2.withdrawReward()
 
                   assert.equal((await bet.getContractBalance()).toString(), "0")
@@ -440,8 +441,8 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
                   // EA ret 1 => home win
 
                   await bet.withdrawReward()
-                  await expect(accConnection1.withdrawReward()).to.be.revertedWith("Bet__NoReward")
-                  await expect(accConnection2.withdrawReward()).to.be.revertedWith("Bet__NoReward")
+                  await expect(accConnection1.withdrawReward()).to.be.revertedWith("Bet__PlayersNotFundedYet")
+                  await expect(accConnection2.withdrawReward()).to.be.revertedWith("Bet__PlayersNotFundedYet")
 
                   assert.equal((await bet.getContractBalance()).toString(), "0")
               })
@@ -639,7 +640,8 @@ const BET_PRICE = ethers.utils.parseEther("0.1")
 
                   assert.equal(
                       (await linkToken.balanceOf(bet.address)).toString(),
-                      ethers.utils.parseEther("1") - ethers.utils.parseEther("0.1") /* the bet.performUpkeep("0x") fee */
+                      networkConfig[chainId]["fundAmount"] -
+                          networkConfig[chainId]["requestFee"] /* the bet.performUpkeep("0x") fee */
                   )
                   //------------------------------------
                   assert.equal((await bet.getTimeout()).toString(), TIMEOUT * 2)

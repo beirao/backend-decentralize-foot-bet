@@ -17,10 +17,10 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 // yarn hardhat test --network goerli
 developmentChains.includes(network.name)
     ? describe.skip
-    : describe("STAGING TEST BET | TIMEOUT ", async function () {
+    : describe("STAGING TEST BET | TIMEOUT WIN", async function () {
           let bet, deployer, accounts, matchTimestamp, timeout, acc1, acc2, acc3, betTemp
           before(async () => {
-              const matchId = "416100" // 0
+              const matchId = "416100" // TIMEOUT
 
               const { deploy, log, get } = deployments
               const { deployer } = await getNamedAccounts()
@@ -32,7 +32,7 @@ developmentChains.includes(network.name)
               //set log level to ignore non errors
               ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.ERROR)
 
-              timeout = 20 // 1 minutes
+              timeout = 20 // 20 sec
               matchTimestamp = Math.trunc(Date.now() * 0.001) + 8 * 60 // 8 minutes
               //matchTimestamp = 1663902162
               apiUrl = process.env.API_URL
@@ -127,15 +127,16 @@ developmentChains.includes(network.name)
                       await assert.equal(await bet.getAwayBetAmount(), BET_PRICE.toString())
                       await assert.equal(await bet.getDrawBetAmount(), BET_PRICE.toString())
                   })
-                  describe("Upkeeper simulation...", async function () {
-                      let deployer, bet, accounts
+                  describe("Upkeeper simulation... Tirp", async function () {
+                      let deployer, bet, accounts, timeout
                       before(async () => {
                           const { deployer } = await getNamedAccounts()
                           bet = await ethers.getContract("Bet", deployer)
-                          matchTimestamp = await bet.getMatchTimeStamp()
                           accounts = await ethers.getSigners()
+                          matchTimestamp = await bet.getMatchTimeStamp()
+                          timeout = await bet.getTimeout()
 
-                          const nbCallPerformupkeep = 0
+                          let nbCallPerformupkeep = 0
                           while (1) {
                               console.log("Wait : ", Math.trunc(Date.now() * 0.001) - matchTimestamp)
                               await delay(3000)
@@ -150,15 +151,15 @@ developmentChains.includes(network.name)
                                   continue
                               }
                           }
-                          console.log("Still wait : ", Math.trunc(Date.now() * 0.001) - (timeout + matchTimestamp + 10))
-                          delay((Math.trunc(Date.now() * 0.001) - (timeout + matchTimestamp + 10)) * 1000)
+
+                          const confirmationTime = 60000
+                          console.log("Still wait : ", confirmationTime)
+                          await delay(confirmationTime)
                       })
-                      it("Check bet result DRAW win", async () => {
+                      it("Check bet result", async () => {
                           const { deployer } = await getNamedAccounts()
                           bet = await ethers.getContract("Bet", deployer)
                           accounts = await ethers.getSigners()
-
-                          delay(5000) // 5secs
 
                           assert.equal((await bet.getReward(accounts[0].address)).toString(), BET_PRICE.toString())
                           assert.equal((await bet.getReward(accounts[1].address)).toString(), BET_PRICE.toString())

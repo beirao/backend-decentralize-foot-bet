@@ -5,7 +5,7 @@ const TIMEOUT = 24 * 60 * 60 // 1 jour
 const networkConfig = {
     default: {
         name: "hardhat",
-        requestFee: "200000000000000000", // 0.2 LINK
+        requestFee: "100000000000000000", // 0.2 LINK
         keyHash: "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc",
         jobId: "29fa9aa13bf1468788b7cc4a500a45b8",
         fundAmount: "2000000000000000000", // 2 link
@@ -15,7 +15,7 @@ const networkConfig = {
     },
     31337: {
         name: "localhost",
-        requestFee: "200000000000000000", // 0.2 LINK
+        requestFee: "100000000000000000", // 0.2 LINK
         keyHash: "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc",
         jobId: "29fa9aa13bf1468788b7cc4a500a45b8",
         fundAmount: "2000000000000000000", // 2 link
@@ -32,7 +32,7 @@ const networkConfig = {
         oracle: "0x74EcC8Bdeb76F2C6760eD2dc8A46ca5e581fA656",
         jobId: "c1c5e92880894eb6b27d3cae19670aa3", // get > bool
         fundAmount: "2000000000000000000", // 2 link
-        requestFee: "200000000000000000", // 0.2 LINK
+        requestFee: "100000000000000000", // 0.2 LINK
         registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
         registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
     },
@@ -42,7 +42,7 @@ const networkConfig = {
         fundAmount: "2000000000000000000", // 2 link
         registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
         registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",
-        requestFee: "200000000000000000", // 0.2 LINK
+        requestFee: "100000000000000000", // 0.2 LINK
     },
     4: {
         name: "rinkeby",
@@ -53,7 +53,7 @@ const networkConfig = {
         oracle: "0xf3FBB7f3391F62C8fe53f89B41dFC8159EE9653f",
         jobId: "fcf4140d696d44b687012232948bdd5d", // get > unint256
         fundAmount: "2000000000000000000", // 2 link
-        requestFee: "200000000000000000", // 0.2 LINK
+        requestFee: "100000000000000000", // 0.2 LINK
         gasLimitKeeper: "9999999",
         amountSendToKeeper: "5010000000000000000", // "5010000000000000000" # 5.01 LINKs
         registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
@@ -61,7 +61,7 @@ const networkConfig = {
     },
     5: {
         name: "goerli",
-        requestFee: "200000000000000000", // 0.2 LINK
+        requestFee: "100000000000000000", // 0.2 LINK
         linkToken: "0x326c977e6efc84e512bb9c30f76e30c160ed06fb",
         registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
         registrarAddress: "0x9806cf6fBc89aBF286e8140C42174B94836e36F2",
@@ -77,7 +77,7 @@ const networkConfig = {
         ethUsdPriceFeed: "0xF9680D99D6C9589e2a93a78A04A279e509205945",
         oracle: "0x0a31078cd57d23bf9e8e8f1ba78356ca2090569e",
         jobId: "12b86114fa9e46bab3ca436f88e1a912",
-        requestFee: "200000000000000000", // 0.2 LINK
+        requestFee: "100000000000000000", // 0.2 LINK
         fundAmount: "2000000000000000000", // 2 link
         registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
         registrarAddress: "0xDb8e8e2ccb5C033938736aa89Fe4fa1eDfD15a1d",

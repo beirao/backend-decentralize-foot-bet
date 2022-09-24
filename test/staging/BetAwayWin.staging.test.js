@@ -128,16 +128,17 @@ developmentChains.includes(network.name)
                       await assert.equal(await bet.getDrawBetAmount(), BET_PRICE.toString())
                   })
                   describe("Upkeeper simulation...", async function () {
-                      let deployer, bet, accounts
+                      let deployer, bet, accounts, timeout
                       before(async () => {
                           const { deployer } = await getNamedAccounts()
                           bet = await ethers.getContract("Bet", deployer)
-                          matchTimestamp = await bet.getMatchTimeStamp()
                           accounts = await ethers.getSigners()
+                          matchTimestamp = await bet.getMatchTimeStamp()
+                          timeout = await bet.getTimeout()
 
                           while (1) {
                               console.log("Wait : ", Math.trunc(Date.now() * 0.001) - matchTimestamp)
-                              await delay(3000)
+                              await delay(10000)
                               console.log("Test upkeep.")
                               const { upkeepNeeded: upkeepNeededT } = await bet.callStatic.checkUpkeep([])
                               if (upkeepNeededT) {
@@ -148,18 +149,17 @@ developmentChains.includes(network.name)
                                   continue
                               }
                           }
-                          console.log("Still wait : ", Math.trunc(Date.now() * 0.001) - (timeout + matchTimestamp + 10))
-                          delay((Math.trunc(Date.now() * 0.001) - (timeout + matchTimestamp + 10)) * 1000)
+                          const confirmationTime = 60000
+                          console.log("Still wait : ", confirmationTime)
+                          await delay(confirmationTime)
                       })
-                      it("Check bet result DRAW win", async () => {
+                      it("Check bet result", async () => {
                           const { deployer } = await getNamedAccounts()
                           bet = await ethers.getContract("Bet", deployer)
                           accounts = await ethers.getSigners()
 
-                          delay(5000) // 5secs
-
-                          assert.equal((await bet.getReward(accounts[0].address)).toString(), "0")
                           assert.equal((await bet.getReward(accounts[2].address)).toString(), "0")
+                          assert.equal((await bet.getReward(accounts[0].address)).toString(), "0")
                           assert.equal(
                               (await bet.getReward(accounts[1].address)).toString(),
                               (BET_PRICE * 3 * (1 - FEE_OWNER)).toString()

@@ -56,6 +56,10 @@ const BET_PRICE = ethers.utils.parseEther("0.01")
                   await assert.equal(await bet.getReward(deployer), "0")
                   await assert.equal(await accConnection1.getReward(accConnection1.address), "0")
               })
+              it("Revert when the bet value is wrong", async function () {
+                  await expect(bet.toBet(0, { value: MINIMUM_BET - 1 })).to.be.revertedWith("Bet__BetValueIsWrong")
+                  await expect(bet.toBet(4, { value: MINIMUM_BET - 1 })).to.be.revertedWith("Bet__BetValueIsWrong")
+              })
               it("Check variable home bet + event", async function () {
                   const tx = await bet.toBet(1, { value: MINIMUM_BET })
                   const txr = await tx.wait(1)
@@ -98,6 +102,23 @@ const BET_PRICE = ethers.utils.parseEther("0.01")
                           .add(await bet.getDrawBetAmount())
                           .toString()
                   )
+              })
+
+              it("Test contract when there is not enough players", async function () {
+                  await bet.toBet(3, { value: BET_PRICE })
+                  await network.provider.request({ method: "evm_increaseTime", params: [TIMEOUT * 2 + 100] })
+                  await network.provider.request({ method: "evm_mine", params: [] })
+                  await (
+                      await mockOracle.fulfillOracleRequest(
+                          (
+                              await (await bet.performUpkeep("0x")).wait(1)
+                          ).events[0].args.id,
+                          numToBytes32(0)
+                      )
+                  ).wait(1)
+
+                  assert.equal(await bet.getSmartContractState(), "6")
+                  assert.equal((await bet.getReward(deployer)).toString(), BET_PRICE)
               })
           })
           describe("Cancel bet", function () {
@@ -617,6 +638,7 @@ const BET_PRICE = ethers.utils.parseEther("0.01")
                   assert.equal((await accConnection2.getReward(accounts[2].address)).toString(), BET_PRICE.toString())
                   assert.equal((await bet.getReward(deployer)).toString(), (BET_PRICE * 3).toString())
                   assert.equal((await linkToken.balanceOf(bet.address)).toString(), "0")
+                  assert.equal(await bet.getSmartContractState(), "5")
               })
               it("performUpkeep iteration x2", async () => {
                   //-------------------------------------
@@ -669,6 +691,7 @@ const BET_PRICE = ethers.utils.parseEther("0.01")
                       ((BET_PRICE * 5 * (1 - FEE_OWNER)) / 2).toString()
                   )
                   assert.equal((await accConnection2.getReward(accounts[2].address)).toString(), "0")
+                  assert.equal(await bet.getSmartContractState(), "4")
               })
           })
       })

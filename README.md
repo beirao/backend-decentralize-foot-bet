@@ -218,22 +218,6 @@ or
 yarn hardhat test --network rinkeby
 ```
 
-## Performance optimizations
-
-Since all tests are written in a way to be independent from each other, you can save time by running them in parallel. Make sure that `AUTO_FUND=false` inside `.env` file. There are some limitations with parallel testing, read more about them [here](https://hardhat.org/guides/parallel-tests.html)
-
-To run tests in parallel:
-
-```
-yarn test --parallel
-```
-
-or
-
-```
-yarn hardhat test --parallel
-```
-
 # Interacting with Deployed Contracts
 
 After deploying your contracts, the deployment output will give you the contract addresses as they are deployed. You can then use these contract addresses in conjunction with Hardhat tasks to perform operations on each contract.
@@ -264,32 +248,6 @@ Once you have successfully made a request for external data, you can see the res
 
 ```bash
 yarn hardhat read-data --contract insert-contract-address-here --network network
-```
-
-## VRF Get a random number
-
-The VRFConsumer contract has two tasks, one to request a random number, and one to read the result of the random number request. To start, go to [VRF Subscription Page](https://vrf.chain.link/rinkeby) and create the new subscription. Save your subscription ID and put it in `.env` file as `VRF_SUBSCRIPTION_ID`:
-
-```bash
-VRF_SUBSCRIPTION_ID=subscription_id
-```
-
-Then, deploy your VRF V2 contract consumer to the network of your recent subscription using subscription id as constructor argument.
-
-```bash
-yarn hardhat deploy --network network
-```
-
-Finally, you need to go to your subscription page one more time and add the address of deployed contract as a new consumer. Once that's done, you can perform a VRF request with the request-random-number task:
-
-```bash
-yarn hardhat request-random-number --contract insert-contract-address-here --network network
-```
-
-Once you have successfully made a request for a random number, you can see the result via the read-random-number task:
-
-```bash
-yarn hardhat read-random-number --contract insert-contract-address-here --network network
 ```
 
 ## Keepers
@@ -377,12 +335,6 @@ To exit Echidna type
 ```bash
 exit
 ```
-
-# Contributing
-
-Contributions are always welcome! Open a PR or an issue!
-
-# Thank You!
 
 ## Resources
 

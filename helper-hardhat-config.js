@@ -61,7 +61,7 @@ const networkConfig = {
     },
     5: {
         name: "goerli",
-        requestFee: "100000000000000000", // 0.2 LINK
+        requestFee: "100000000000000000", // 0.1 LINK
         linkToken: "0x326c977e6efc84e512bb9c30f76e30c160ed06fb",
         registryAddress: "0x02777053d6764996e594c3E88AF1D58D5363a2e6",
         registrarAddress: "0x9806cf6fBc89aBF286e8140C42174B94836e36F2",

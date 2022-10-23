@@ -1,6 +1,6 @@
 # Decentralize Football Bet
 
-Implementation of the following 4 Chainlink features using the [Hardhat](https://hardhat.org/) development environment:
+Implementation of the following 2 Chainlink features using the [Hardhat](https://hardhat.org/) development environment:
 
 -   [Chainlink Keepers](https://docs.chain.link/docs/chainlink-keepers/introduction/)
 -   [Request & Receive data](https://docs.chain.link/docs/request-and-receive-data)

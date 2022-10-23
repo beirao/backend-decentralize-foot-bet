@@ -70,13 +70,10 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
     contractState private s_betState;
     string private s_matchId;
     uint256 private immutable i_matchTimeStamp;
-    uint256 private s_lastTimeStamp;
     uint256 private s_countPerformUpkeep;
     uint8 private constant NB_OF_TRIES = 5;
 
     // Results vars
-    uint8 private s_homeScore;
-    uint8 private s_awayScore;
     matchState private s_winner;
 
     // Chainlink var
@@ -88,7 +85,6 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
     event playerBetting(matchState ms, address indexed playerAdrr);
     event playerCancelBet(address indexed playerAdrr);
     event RequestWinner(bytes32 indexed requestId, uint256 _matchState);
-    event RequestBetWinner(bytes32 indexed requestId);
     event BetEnded(contractState cs, matchState ms);
 
     // Modifiers
@@ -280,6 +276,7 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
         } else {
             s_betState = contractState.PLAYERS_FUNDED_NOT_ENOUGH_PLAYERS;
         }
+        emit BetEnded(getSmartContractState(), getWinner());
     }
 
     /** @dev Player quand withdraw their reward by caling this function */
@@ -328,7 +325,6 @@ contract Bet is ChainlinkClient, ConfirmedOwner, KeeperCompatibleInterface, Reen
             revert Bet__UpkeepNotNeeded(address(this).balance, uint256(s_betState));
         }
         bytes32 requestId = requestWinnerData();
-        emit RequestBetWinner(requestId);
     }
 
     /**

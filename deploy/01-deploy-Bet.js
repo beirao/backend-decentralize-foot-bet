@@ -32,9 +32,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         apiUrl = process.env.API_URL
     } else {
         timeout = 1 * 60 // 1 minutes
-        matchTimestamp = 1663854805 + 10 * 60 // 10 minutes
-
-        // matchTimestamp = Math.trunc(Date.now() * 0.001) + timeout // test purpose
+        // matchTimestamp = 1663854805 + 100 * 60 // 100 minutes
+        matchTimestamp = Math.trunc(Date.now() * 0.001) + 7 * 24 * 60 * 60
         apiUrl = process.env.API_URL
         linkTokenAddress = networkConfig[chainId]["linkToken"]
         oracle = networkConfig[chainId]["oracle"]
